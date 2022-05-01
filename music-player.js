@@ -2,7 +2,10 @@ class MusicPlayer {
 	currentTrack;
 	trackList;
 
-//control elements
+	//basic ui pane
+	trackListDisplay;
+
+	//control elements
 	playButton;
 	pauseButton;
 	stopButton;
@@ -13,7 +16,7 @@ class MusicPlayer {
 	}
 
 	loadTrackList(callBack) {
-		fetch('music.json')
+		fetch('index.json')
 		.then(response => response.json())
 		.then(data => {
 			this.trackList = data;
@@ -24,15 +27,21 @@ class MusicPlayer {
 		});
 	}
 
+	displayTrackList(filter) {
+		this.trackListDisplay.innerHTML = '';
+		this.trackList.forEach((track) => {
+			this.trackListDisplay.innerHTML += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album} /</span> ${track.name}</div>`;
+		});
+	}
+
 	setTrack(index) {
-		if (this.trackList?.length > index) {
-			let track = this.trackList[index];
+		let track = this.trackList.find(t => t.index === index);
+		if (!!track) {
 			this.trackNameDisplay.innerText = track.name;
 			this.loadTrack(track.src);
 		} else {
 			console.warn(`Track ${index} not in track list`);
 		}
-
 	}
 
 	loadTrack(path) {
@@ -43,7 +52,13 @@ class MusicPlayer {
 
 	playTrack() {
 		if (this.currentTrack) {
-			this.currentTrack.play();
+			this.currentTrack.play().then(() => {
+				}
+			).catch(e => {
+				console.error('Cannot play selected track: ', e);
+				alert('Unable to play selected track');
+			});
+
 		} else {
 			console.warn('Track not set, will not play');
 		}
@@ -70,6 +85,7 @@ class MusicPlayer {
 		this.playButton.addEventListener('click', () => this.playTrack());
 		this.stopButton.addEventListener('click', () => this.stopTrack());
 		this.pauseButton.addEventListener('click', () => this.pauseTrack());
+		this.trackListDisplay = document.querySelector('#track-list');
 	}
 }
 
@@ -78,6 +94,6 @@ let musicPlayer;
 window.addEventListener('load', () => {
 	musicPlayer = new MusicPlayer();
 	musicPlayer.loadTrackList((player) => {
-		player.setTrack(0);
+		player.displayTrackList();
 	});
 });
