@@ -10,6 +10,9 @@ class MusicPlayer {
 	pauseButton;
 	stopButton;
 	trackNameDisplay;
+	volumeControl;
+
+	volumeLevel = 1;
 
 	constructor() {
 		this.initialize();
@@ -52,6 +55,7 @@ class MusicPlayer {
 
 	playTrack() {
 		if (this.currentTrack) {
+			this.currentTrack.volume = this.volumeLevel;
 			this.currentTrack.play().then(() => {
 				}
 			).catch(e => {
@@ -77,15 +81,25 @@ class MusicPlayer {
 		}
 	}
 
+	setVolume(value) {
+		console.info('Setting volume to ', value);
+		this.volumeLevel = Number(value);
+		if (this.currentTrack) {
+			this.currentTrack.volume = this.volumeLevel;
+		}
+	}
+
 	initialize() {
 		this.playButton = document.querySelector('#music-play-button');
 		this.pauseButton = document.querySelector('#music-pause-button');
 		this.stopButton = document.querySelector('#music-stop-button');
 		this.trackNameDisplay = document.querySelector('#player-name');
-		this.playButton.addEventListener('click', () => this.playTrack());
-		this.stopButton.addEventListener('click', () => this.stopTrack());
-		this.pauseButton.addEventListener('click', () => this.pauseTrack());
+		this.playButton.addEventListener('click', (e) => this.playTrack());
+		this.stopButton.addEventListener('click', (e) => this.stopTrack());
+		this.pauseButton.addEventListener('click', (e) => this.pauseTrack());
 		this.trackListDisplay = document.querySelector('#track-list');
+		this.volumeControl = document.querySelector('#volume-control');
+		this.volumeControl.addEventListener('change', (e) => this.setVolume(e.target.value));
 	}
 }
 
