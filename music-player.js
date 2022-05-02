@@ -19,6 +19,7 @@ class MusicPlayer {
 	}
 
 	loadTrackList(callBack) {
+		console.info('Loading track list');
 		fetch('index.json')
 		.then(response => response.json())
 		.then(data => {
@@ -43,7 +44,7 @@ class MusicPlayer {
 			this.trackNameDisplay.innerText = track.name;
 			this.loadTrack(track.src);
 		} else {
-			console.warn(`Track ${index} not in track list`);
+			console.warn(`Track ${index} not found in track list`);
 		}
 	}
 
@@ -72,17 +73,19 @@ class MusicPlayer {
 		if (this.currentTrack) {
 			this.currentTrack.pause();
 			this.currentTrack.currentTime = 0;
+			console.info('Stopped playback');
 		}
 	}
 
 	pauseTrack() {
 		if (this.currentTrack) {
 			this.currentTrack.pause();
+			console.info('Paused playback');
 		}
 	}
 
 	setVolume(value) {
-		console.info('Setting volume to ', value);
+		console.info(`Setting volume to ${value}x`);
 		this.volumeLevel = Number(value);
 		if (this.currentTrack) {
 			this.currentTrack.volume = this.volumeLevel;
@@ -99,7 +102,7 @@ class MusicPlayer {
 		this.pauseButton.addEventListener('click', (e) => this.pauseTrack());
 		this.trackListDisplay = document.querySelector('#track-list');
 		this.volumeControl = document.querySelector('#volume-control');
-		this.volumeControl.addEventListener('change', (e) => this.setVolume(e.target.value));
+		this.volumeControl.addEventListener('input', (e) => this.setVolume(e.target.value));
 	}
 }
 
