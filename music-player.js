@@ -41,17 +41,26 @@ class MusicPlayer {
 	setTrack(index) {
 		let track = this.trackList.find(t => t.index === index);
 		if (!!track) {
+			//unset the current track first
+			if (this.currentTrack && !this.currentTrack.paused) {
+				console.info('Current track not stooped, stopping');
+				this.currentTrack.pause();
+			}
 			this.trackNameDisplay.innerText = track.name;
-			this.loadTrack(track.src);
+			this.loadTrack(track.src, () => {
+				this.playTrack();
+				this.currentTrack.oncanplay = undefined;//unset the event
+			});
 		} else {
 			console.warn(`Track ${index} not found in track list`);
 		}
 	}
 
-	loadTrack(path) {
-		this.currentTrack = new Audio(path);
+	loadTrack(path, onLoad) {
 		console.info('Loading track: ', path);
-
+		this.currentTrack = new Audio(path);
+		this.currentTrack.oncanplay = onLoad;
+		this.currentTrack.load();
 	}
 
 	playTrack() {
@@ -71,8 +80,8 @@ class MusicPlayer {
 
 	stopTrack() {
 		if (this.currentTrack) {
-			this.currentTrack.pause();
 			this.currentTrack.currentTime = 0;
+			this.currentTrack.pause();
 			console.info('Stopped playback');
 		}
 	}
