@@ -2,6 +2,8 @@ class MusicPlayer {
 	currentTrack;
 	trackList;
 
+	trackSearchInput;
+
 	//basic ui pane
 	trackListDisplay;
 
@@ -31,11 +33,14 @@ class MusicPlayer {
 		});
 	}
 
-	displayTrackList(filter) {
+	displayTrackList(filter = '') {
 		this.trackListDisplay.innerHTML = '';
-		this.trackList.forEach((track) => {
-			this.trackListDisplay.innerHTML += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album} /</span> ${track.name}</div>`;
-		});
+		let newContent = '';
+		this.trackList.filter(t => t.name?.includes(filter) || t.album?.includes(filter))
+			.forEach((track) => {
+				newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album} /</span> ${track.name}</div>`;
+			});
+		this.trackListDisplay.innerHTML = newContent;
 	}
 
 	setTrack(index) {
@@ -112,6 +117,11 @@ class MusicPlayer {
 		this.trackListDisplay = document.querySelector('#track-list');
 		this.volumeControl = document.querySelector('#volume-control');
 		this.volumeControl.addEventListener('input', (e) => this.setVolume(e.target.value));
+		this.trackSearchInput = document.querySelector('#track-search-input');
+		this.trackSearchInput.addEventListener(
+			'input',
+			(e) => this.displayTrackList(e.target.value)
+		);
 	}
 }
 

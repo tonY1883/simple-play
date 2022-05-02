@@ -15,32 +15,34 @@
 	</head>
 	<body>
 
-		<div id="search-bar">searchbar here</div>
+		<header id="search-bar">
+			<input id="track-search-input" type="text" placeholder="Search tracks..."></header>
 		<div id="track-list">
 		</div>
-	</body>
-	<footer>
-		<div class="player-button" id="music-play-button">
+		<footer>
+			<div class="player-button" id="music-play-button">
 			<span class="material-icons">
 				play_arrow
 			</span>
-		</div>
-		<div class="player-button" id="music-pause-button">
+			</div>
+			<div class="player-button" id="music-pause-button">
 			<span class="material-icons">
 				pause
 			</span>
-		</div>
-		<div class="player-button" id="music-stop-button">
+			</div>
+			<div class="player-button" id="music-stop-button">
 			<span class="material-icons">
 				stop
 			</span>
-		</div>
-		<div id="player-name">
-			--
-		</div>
-		<div id="volume">
-			<input type="range" id="volume-control" name="volume"
-					min="0" max="1" value="1" step="0.01">
-		</div>
-	</footer>
+			</div>
+			<div id="player-name">
+				--
+			</div>
+			<div id="volume">
+				<input type="range" id="volume-control" name="volume"
+						min="0" max="1" value="1" step="0.01">
+			</div>
+		</footer>
+	</body>
+
 </html>
