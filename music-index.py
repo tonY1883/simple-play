@@ -20,14 +20,18 @@ pbar = tqdm(total = total_count, leave = True)
 for idx, file in enumerate(files, start = 1):
 	pbar.update(1)
 	if file.is_file():
-		audio = mutagen.File(str(file))
-		pbar.set_description(str(audio['title'][0]))
+		audio = mutagen.File(str(file), easy = True)
 		data = {}
 		data["index"] = idx
-		data["name"] = audio['title'][0]
 		data["src"] = str(file)
-		data["artist"] = audio['artist'][0]
-		data["album"] = audio['album'][0]
+		if 'title' in audio:
+			pbar.set_description(str(audio['title'][0]))
+			data["name"] = audio['title'][0]
+			data["artist"] = audio['artist'][0]
+			data["album"] = audio['album'][0]
+		else:
+			pbar.set_description(file.stem)
+			data["name"] = file.stem
 		tracks.append(data)
 with open('index.json', 'w', encoding = 'utf8') as fp:
 	json.dump(tracks, fp, ensure_ascii = False)
