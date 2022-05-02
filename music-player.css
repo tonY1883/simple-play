@@ -35,6 +35,10 @@ header {
 	width: 100vw;
 }
 
+#track-search-input {
+	width: 30vw;
+}
+
 footer {
 	background-color: white;
 	z-index: 1;
