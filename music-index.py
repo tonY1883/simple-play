@@ -18,20 +18,23 @@ files = list(Path(dir_name).rglob('*.flac')) + list(Path(dir_name).rglob('*.m4a'
 total_count = len(files)
 pbar = tqdm(total = total_count, leave = True)
 for idx, file in enumerate(files, start = 1):
-	pbar.update(1)
-	if file.is_file():
-		audio = mutagen.File(str(file), easy = True)
-		data = {}
-		data["index"] = idx
-		data["src"] = str(file)
-		if 'title' in audio:
-			pbar.set_description(str(audio['title'][0]))
-			data["name"] = audio['title'][0]
-			data["artist"] = audio['artist'][0]
-			data["album"] = audio['album'][0]
-		else:
-			pbar.set_description(file.stem)
-			data["name"] = file.stem
-		tracks.append(data)
+	try:
+		pbar.update(1)
+		if file.is_file():
+			audio = mutagen.File(str(file), easy = True)
+			data = {}
+			data["index"] = idx
+			data["src"] = str(file)
+			if 'title' in audio:
+				pbar.set_description(str(audio['title'][0]))
+				data["name"] = audio['title'][0]
+				data["artist"] = audio['artist'][0]
+				data["album"] = audio['album'][0]
+			else:
+				pbar.set_description(file.stem)
+				data["name"] = file.stem
+			tracks.append(data)
+	except:
+		print("Fail to read " + str(file))
 with open('index.json', 'w', encoding = 'utf8') as fp:
 	json.dump(tracks, fp, ensure_ascii = False)
