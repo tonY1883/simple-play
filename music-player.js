@@ -22,7 +22,7 @@ class MusicPlayer {
 
 	loadTrackList(callBack) {
 		console.info('Loading track list');
-		fetch('index.json')
+		fetch('index.json', {cache: "no-store"})
 		.then(response => response.json())
 		.then(data => {
 			this.trackList = data;
