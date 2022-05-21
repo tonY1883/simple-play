@@ -22,7 +22,7 @@ class MusicPlayer {
 
 	loadTrackList(callBack) {
 		console.info('Loading track list');
-		fetch('index.json', {cache: "no-store"})
+		fetch('index.json', {cache: 'no-store'})
 		.then(response => response.json())
 		.then(data => {
 			this.trackList = data;
@@ -36,7 +36,10 @@ class MusicPlayer {
 	displayTrackList(filter = '') {
 		this.trackListDisplay.innerHTML = '';
 		let newContent = '';
-		this.trackList.filter(t => t.name?.includes(filter) || t.album?.includes(filter))
+		this.trackList.filter(t => t.name?.toLowerCase()
+									.includes(filter.trim().toLowerCase()) || t.album?.toLowerCase()
+																			   .includes(filter.trim()
+																							   .toLowerCase()))
 			.forEach((track) => {
 				newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album} /</span> ${track.name}</div>`;
 			});
