@@ -68,17 +68,20 @@ class MusicPlayer {
 		console.info('Loading track: ', path);
 		this.currentTrack = new Audio(path);
 		this.currentTrack.oncanplay = onLoad;
+		this.currentTrack.onerror = () => {
+			console.error('Cannot play selected track: ', this.currentTrack.error);
+			alert('Error occurred while trying to play selected track');
+		};
 		this.currentTrack.load();
 	}
 
 	playTrack() {
 		if (this.currentTrack) {
 			this.currentTrack.volume = this.volumeLevel;
-			this.currentTrack.play().then(() => {
-				}
+			this.currentTrack.play().then(() => console.log('Begin playing selected track')
 			).catch(e => {
 				console.error('Cannot play selected track: ', e);
-				alert('Unable to play selected track');
+				alert('Error occurred while trying to play selected track');
 			});
 
 		} else {
