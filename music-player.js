@@ -54,7 +54,9 @@ class MusicPlayer {
 																			   .includes(filter.trim()
 																							   .toLowerCase()))
 			.forEach((track) => {
-				newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album} /</span> ${track.name}</div>`;
+				newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ?
+																																	  track.album + ' / ' :
+																																	  ''}</span> ${track.name}</div>`;
 			});
 		this.trackListDisplay.innerHTML = newContent;
 	}
