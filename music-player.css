@@ -17,7 +17,8 @@ body {
 .track-list-item {
 	padding: 1rem 1rem 1rem 2rem;
 	border-top: 1px solid #CBCBCB;
-	border-bottom: 1px solid #CBCBCB;;
+	border-bottom: 1px solid #CBCBCB;
+	user-select: text;
 }
 
 .track-list-item .album-name {
