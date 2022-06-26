@@ -12,12 +12,25 @@ class MusicPlayer {
 	pauseButton;
 	stopButton;
 	trackNameDisplay;
+	timeRemainDisplay;
 	volumeControl;
 
 	volumeLevel = 1;
 
 	constructor() {
 		this.initialize();
+	}
+
+	static formatTime(duration) {
+		//base on https://stackoverflow.com/a/40350003
+		const hour = Math.floor(duration / 3600);
+		const minute = Math.floor((duration % 3600) / 60);
+		const second = Math.floor(duration % 60);
+		return [
+			hour,
+			minute > 9 ? minute : (hour ? '0' + minute : minute || '0'),
+			second > 9 ? second : '0' + second
+		].filter(Boolean).join(':');
 	}
 
 	loadTrackList(callBack) {
@@ -41,7 +54,9 @@ class MusicPlayer {
 																			   .includes(filter.trim()
 																							   .toLowerCase()))
 			.forEach((track) => {
-				newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album} /</span> ${track.name}</div>`;
+				newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ?
+																																	  track.album + ' / ' :
+																																	  ''}</span> ${track.name}</div>`;
 			});
 		this.trackListDisplay.innerHTML = newContent;
 	}
@@ -54,9 +69,10 @@ class MusicPlayer {
 				console.info('Current track not stooped, stopping');
 				this.currentTrack.pause();
 			}
-			this.trackNameDisplay.innerText = track.name;
 			this.loadTrack(track.src, () => {
 				this.playTrack();
+				this.trackNameDisplay.innerText = track.name;
+				this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration);
 				this.currentTrack.oncanplay = undefined;//unset the event
 			});
 		} else {
@@ -68,17 +84,23 @@ class MusicPlayer {
 		console.info('Loading track: ', path);
 		this.currentTrack = new Audio(path);
 		this.currentTrack.oncanplay = onLoad;
+		this.currentTrack.onerror = () => {
+			console.error('Cannot play selected track: ', this.currentTrack.error);
+			alert('Error occurred while trying to play selected track');
+		};
+		this.currentTrack.ontimeupdate = () => {
+			this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration - this.currentTrack.currentTime);
+		};
 		this.currentTrack.load();
 	}
 
 	playTrack() {
 		if (this.currentTrack) {
 			this.currentTrack.volume = this.volumeLevel;
-			this.currentTrack.play().then(() => {
-				}
+			this.currentTrack.play().then(() => console.log('Begin playing selected track')
 			).catch(e => {
 				console.error('Cannot play selected track: ', e);
-				alert('Unable to play selected track');
+				alert('Error occurred while trying to play selected track');
 			});
 
 		} else {
@@ -114,6 +136,7 @@ class MusicPlayer {
 		this.pauseButton = document.querySelector('#music-pause-button');
 		this.stopButton = document.querySelector('#music-stop-button');
 		this.trackNameDisplay = document.querySelector('#player-name');
+		this.timeRemainDisplay = document.querySelector('#player-remaining-time');
 		this.playButton.addEventListener('click', (e) => this.playTrack());
 		this.stopButton.addEventListener('click', (e) => this.stopTrack());
 		this.pauseButton.addEventListener('click', (e) => this.pauseTrack());
