@@ -74,6 +74,22 @@ class MusicPlayer {
 				this.trackNameDisplay.innerText = track.name;
 				this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration);
 				this.currentTrack.oncanplay = undefined;//unset the event
+				if ('mediaSession' in navigator) {
+					navigator.mediaSession.metadata = new MediaMetadata({
+						title: track.name,
+						artist: track.artist,
+						album: track.album
+					});
+					navigator.mediaSession.setActionHandler('play', () => {
+						this.playTrack();
+					});
+					navigator.mediaSession.setActionHandler('pause', () => {
+						this.pauseTrack();
+					});
+					navigator.mediaSession.setActionHandler('stop', () => {
+						this.stopTrack();
+					});
+				}
 			});
 		} else {
 			console.warn(`Track ${index} not found in track list`);
@@ -97,7 +113,12 @@ class MusicPlayer {
 	playTrack() {
 		if (this.currentTrack) {
 			this.currentTrack.volume = this.volumeLevel;
-			this.currentTrack.play().then(() => console.log('Begin playing selected track')
+			this.currentTrack.play().then(() => {
+					console.log('Begin playing selected track');
+					if (navigator.mediaSession) {
+						navigator.mediaSession.playbackState = 'playing';
+					}
+				}
 			).catch(e => {
 				console.error('Cannot play selected track: ', e);
 				alert('Error occurred while trying to play selected track');
@@ -112,6 +133,9 @@ class MusicPlayer {
 		if (this.currentTrack) {
 			this.currentTrack.currentTime = 0;
 			this.currentTrack.pause();
+			if (navigator.mediaSession) {
+				navigator.mediaSession.playbackState = 'paused';
+			}
 			console.info('Stopped playback');
 		}
 	}
@@ -119,6 +143,9 @@ class MusicPlayer {
 	pauseTrack() {
 		if (this.currentTrack) {
 			this.currentTrack.pause();
+			if (navigator.mediaSession) {
+				navigator.mediaSession.playbackState = 'paused';
+			}
 			console.info('Paused playback');
 		}
 	}
