@@ -49,10 +49,12 @@ class MusicPlayer {
 	displayTrackList(filter = '') {
 		this.trackListDisplay.innerHTML = '';
 		let newContent = '';
-		this.trackList.filter(t => t.name?.toLowerCase()
-									.includes(filter.trim().toLowerCase()) || t.album?.toLowerCase()
-																			   .includes(filter.trim()
-																							   .toLowerCase()))
+		this.trackList.filter(t => filter.trim()
+										 .toLowerCase()
+										 .split(' ')
+										 .every(kw => t.name?.toLowerCase()
+													   .includes(kw) || t.album?.toLowerCase()
+																		 .includes(kw)))
 			.forEach((track) => {
 				newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ?
 																																	  track.album + ' / ' :
