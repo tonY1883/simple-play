@@ -13,9 +13,11 @@ class MusicPlayer {
 	stopButton;
 	trackNameDisplay;
 	timeRemainDisplay;
+	loopButton;
 	volumeControl;
 
 	volumeLevel = 1;
+	isLooped = false;
 
 	constructor() {
 		this.initialize();
@@ -109,6 +111,13 @@ class MusicPlayer {
 		this.currentTrack.ontimeupdate = () => {
 			this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration - this.currentTrack.currentTime);
 		};
+		this.currentTrack.onended = () => {
+			if (this.isLooped) {
+				console.info("Looping enabled, restarting playback")
+				this.stopTrack();
+				this.playTrack();
+			}
+		}
 		this.currentTrack.load();
 	}
 
@@ -159,16 +168,31 @@ class MusicPlayer {
 			this.currentTrack.volume = this.volumeLevel;
 		}
 	}
+	
+	toggleLooping(){
+		this.isLooped = !this.isLooped;
+		this.updateLoopingDisplay();
+	}
+
+	updateLoopingDisplay(){
+		if (this.isLooped) {
+			this.loopButton.style.opacity = "1";
+		} else {
+			this.loopButton.style.opacity = "0.4";
+		}
+	}
 
 	initialize() {
 		this.playButton = document.querySelector('#music-play-button');
 		this.pauseButton = document.querySelector('#music-pause-button');
 		this.stopButton = document.querySelector('#music-stop-button');
+		this.loopButton = document.querySelector('#music-loop-button');
 		this.trackNameDisplay = document.querySelector('#player-name');
 		this.timeRemainDisplay = document.querySelector('#player-remaining-time');
 		this.playButton.addEventListener('click', (e) => this.playTrack());
 		this.stopButton.addEventListener('click', (e) => this.stopTrack());
 		this.pauseButton.addEventListener('click', (e) => this.pauseTrack());
+		this.loopButton.addEventListener('click', (e) => this.toggleLooping());
 		this.trackListDisplay = document.querySelector('#track-list');
 		this.volumeControl = document.querySelector('#volume-control');
 		this.volumeControl.addEventListener('input', (e) => this.setVolume(e.target.value));
@@ -177,6 +201,7 @@ class MusicPlayer {
 			'input',
 			(e) => this.displayTrackList(e.target.value)
 		);
+		this.updateLoopingDisplay();
 	}
 }
 
