@@ -65,7 +65,9 @@ footer {
 
 #player-control-group-right {
 	height: 100%;
-	padding: 0 8rem 0 0;
+	padding: 0 6rem 0 0;
+	display: flex;
+	flex-direction: row;
 }
 
 #volume {

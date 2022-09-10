@@ -14,10 +14,12 @@ class MusicPlayer {
 	trackNameDisplay;
 	timeRemainDisplay;
 	loopButton;
+	randomButton;
 	volumeControl;
 
 	volumeLevel = 1;
 	isLooped = false;
+	isRandom = false;
 
 	constructor() {
 		this.initialize();
@@ -106,16 +108,27 @@ class MusicPlayer {
 		this.currentTrack.oncanplay = onLoad;
 		this.currentTrack.onerror = () => {
 			console.error('Cannot play selected track: ', this.currentTrack.error);
-			alert('Error occurred while trying to play selected track');
+			if (this.isRandom) {
+				console.warn("Selected track cannot be played, moving on to next track");
+				this.randomSetTrack();
+			} else {
+				alert('Error occurred while trying to play selected track');
+			}
+		
 		};
 		this.currentTrack.ontimeupdate = () => {
 			this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration - this.currentTrack.currentTime);
 		};
 		this.currentTrack.onended = () => {
 			if (this.isLooped) {
-				console.info("Looping enabled, restarting playback")
+				console.info("Looping enabled, restarting playback");
 				this.stopTrack();
 				this.playTrack();
+			} else if (this.isRandom) {
+				// Only move to next track if loop is not enabled
+				console.info("Random enabled, picking next track");
+				this.randomSetTrack();
+				
 			}
 		}
 		this.currentTrack.load();
@@ -168,13 +181,13 @@ class MusicPlayer {
 			this.currentTrack.volume = this.volumeLevel;
 		}
 	}
-	
-	toggleLooping(){
+
+	toggleLooping() {
 		this.isLooped = !this.isLooped;
 		this.updateLoopingDisplay();
 	}
 
-	updateLoopingDisplay(){
+	updateLoopingDisplay() {
 		if (this.isLooped) {
 			this.loopButton.style.opacity = "1";
 		} else {
@@ -182,17 +195,36 @@ class MusicPlayer {
 		}
 	}
 
+	toggleRandom() {
+		this.isRandom = !this.isRandom;
+		this.updateRandomDisplay();
+	}
+
+	updateRandomDisplay() {
+		if (this.isRandom) {
+			this.randomButton.style.opacity = "1";
+		} else {
+			this.randomButton.style.opacity = "0.4";
+		}
+	}
+
+	randomSetTrack(){
+		this.setTrack(this.trackList[Math.floor(Math.random() * this.trackList.length)].index)
+	}
+
 	initialize() {
 		this.playButton = document.querySelector('#music-play-button');
 		this.pauseButton = document.querySelector('#music-pause-button');
 		this.stopButton = document.querySelector('#music-stop-button');
 		this.loopButton = document.querySelector('#music-loop-button');
+		this.randomButton = document.querySelector('#music-random-button');
 		this.trackNameDisplay = document.querySelector('#player-name');
 		this.timeRemainDisplay = document.querySelector('#player-remaining-time');
 		this.playButton.addEventListener('click', (e) => this.playTrack());
 		this.stopButton.addEventListener('click', (e) => this.stopTrack());
 		this.pauseButton.addEventListener('click', (e) => this.pauseTrack());
 		this.loopButton.addEventListener('click', (e) => this.toggleLooping());
+		this.randomButton.addEventListener('click', (e) => this.toggleRandom());
 		this.trackListDisplay = document.querySelector('#track-list');
 		this.volumeControl = document.querySelector('#volume-control');
 		this.volumeControl.addEventListener('input', (e) => this.setVolume(e.target.value));
@@ -202,6 +234,7 @@ class MusicPlayer {
 			(e) => this.displayTrackList(e.target.value)
 		);
 		this.updateLoopingDisplay();
+		this.updateRandomDisplay();
 	}
 }
 
