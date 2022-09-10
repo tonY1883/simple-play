@@ -59,8 +59,13 @@ footer {
 #player-remaining-time {
 	margin-left: auto;
 	height: 100%;
-	padding: 1rem 10rem 1rem 1rem;
+	padding: 1rem 3rem 1rem 1rem;
 	font-size: 1.2rem;
+}
+
+#player-control-group-right {
+	height: 100%;
+	padding: 0 8rem 0 0;
 }
 
 #volume {
@@ -154,5 +159,9 @@ footer {
 	#player-remaining-time {
 		padding-right: 0;
 		padding-left: 0.5rem;
+	}
+
+	#player-control-group-right {
+		padding: 0;
 	}
 }
