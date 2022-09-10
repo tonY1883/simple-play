@@ -35,30 +35,30 @@ class MusicPlayer {
 
 	loadTrackList(callBack) {
 		console.info('Loading track list');
-		fetch('index.json', {cache: 'no-store'})
-		.then(response => response.json())
-		.then(data => {
-			this.trackList = data;
-		}).then(() => callBack(this))
-		.catch(err => {
-			console.error(err);
-			alert('error: ' + err);
-		});
+		fetch('index.json', { cache: 'no-store' })
+			.then(response => response.json())
+			.then(data => {
+				this.trackList = data;
+			}).then(() => callBack(this))
+			.catch(err => {
+				console.error(err);
+				alert('error: ' + err);
+			});
 	}
 
 	displayTrackList(filter = '') {
 		this.trackListDisplay.innerHTML = '';
 		let newContent = '';
 		this.trackList.filter(t => filter.trim()
-										 .toLowerCase()
-										 .split(' ')
-										 .every(kw => t.name?.toLowerCase()
-													   .includes(kw) || t.album?.toLowerCase()
-																		 .includes(kw)))
+			.toLowerCase()
+			.split(' ')
+			.every(kw => t.name?.toLowerCase()
+				.includes(kw) || t.album?.toLowerCase()
+					.includes(kw)))
 			.forEach((track) => {
 				newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ?
-																																	  track.album + ' / ' :
-																																	  ''}</span> ${track.name}</div>`;
+					track.album + ' / ' :
+					''}</span> ${track.name}</div>`;
 			});
 		this.trackListDisplay.innerHTML = newContent;
 	}
@@ -116,11 +116,11 @@ class MusicPlayer {
 		if (this.currentTrack) {
 			this.currentTrack.volume = this.volumeLevel;
 			this.currentTrack.play().then(() => {
-					console.log('Begin playing selected track');
-					if (navigator.mediaSession) {
-						navigator.mediaSession.playbackState = 'playing';
-					}
+				console.log('Begin playing selected track');
+				if (navigator.mediaSession) {
+					navigator.mediaSession.playbackState = 'playing';
 				}
+			}
 			).catch(e => {
 				console.error('Cannot play selected track: ', e);
 				alert('Error occurred while trying to play selected track');

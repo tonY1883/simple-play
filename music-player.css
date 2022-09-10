@@ -94,7 +94,8 @@ footer {
 	font-family: 'Material Icons Sharp';
 	font-weight: normal;
 	font-style: normal;
-	font-size: 24px; /* Preferred icon size */
+	font-size: 24px;
+	/* Preferred icon size */
 	display: flex;
 	align-items: center;
 	line-height: 1;
@@ -119,8 +120,8 @@ footer {
 @font-face {
 	font-family: 'Material Icons Sharp';
 	src: local('MaterialIconsSharp-Regular'),
-	url('font/MaterialIconsSharp-Regular.woff2') format('woff2'),
-	url('font/MaterialIconsSharp-Regular.woff') format('woff');
+		url('font/MaterialIconsSharp-Regular.woff2') format('woff2'),
+		url('font/MaterialIconsSharp-Regular.woff') format('woff');
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
@@ -155,4 +156,3 @@ footer {
 		padding-left: 0.5rem;
 	}
 }
-
