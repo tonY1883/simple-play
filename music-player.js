@@ -53,17 +53,21 @@ class MusicPlayer {
 	displayTrackList(filter = '') {
 		this.trackListDisplay.innerHTML = '';
 		let newContent = '';
-		this.trackList.filter(t => filter.trim()
+		//find exact match first, then append word match.
+		let result = this.trackList.filter(t => t.name.toLowerCase()
+			.includes(filter.trim()
+				.toLowerCase()))
+		result.concat(this.trackList.filter(t => filter.trim()
 			.toLowerCase()
 			.split(' ')
 			.every(kw => t.name?.toLowerCase()
 				.includes(kw) || t.album?.toLowerCase()
-					.includes(kw)))
-			.forEach((track) => {
-				newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ?
-					track.album + ' / ' :
-					''}</span> ${track.name}</div>`;
-			});
+					.includes(kw)) && !!!result.find(rt => rt.index === t.index))
+		).forEach((track) => {
+			newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ?
+				track.album + ' / ' :
+				''}</span> ${track.name}</div>`;
+		});
 		this.trackListDisplay.innerHTML = newContent;
 	}
 
@@ -114,7 +118,7 @@ class MusicPlayer {
 			} else {
 				alert('Error occurred while trying to play selected track');
 			}
-		
+
 		};
 		this.currentTrack.ontimeupdate = () => {
 			this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration - this.currentTrack.currentTime);
@@ -128,7 +132,7 @@ class MusicPlayer {
 				// Only move to next track if loop is not enabled
 				console.info("Random enabled, picking next track");
 				this.randomSetTrack();
-				
+
 			}
 		}
 		this.currentTrack.load();
@@ -208,7 +212,7 @@ class MusicPlayer {
 		}
 	}
 
-	randomSetTrack(){
+	randomSetTrack() {
 		this.setTrack(this.trackList[Math.floor(Math.random() * this.trackList.length)].index)
 	}
 
