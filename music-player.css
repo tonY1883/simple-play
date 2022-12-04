@@ -59,8 +59,15 @@ footer {
 #player-remaining-time {
 	margin-left: auto;
 	height: 100%;
-	padding: 1rem 10rem 1rem 1rem;
+	padding: 1rem 3rem 1rem 1rem;
 	font-size: 1.2rem;
+}
+
+#player-control-group-right {
+	height: 100%;
+	padding: 0 6rem 0 0;
+	display: flex;
+	flex-direction: row;
 }
 
 #volume {
@@ -94,7 +101,8 @@ footer {
 	font-family: 'Material Icons Sharp';
 	font-weight: normal;
 	font-style: normal;
-	font-size: 24px; /* Preferred icon size */
+	font-size: 24px;
+	/* Preferred icon size */
 	display: flex;
 	align-items: center;
 	line-height: 1;
@@ -119,8 +127,8 @@ footer {
 @font-face {
 	font-family: 'Material Icons Sharp';
 	src: local('MaterialIconsSharp-Regular'),
-	url('font/MaterialIconsSharp-Regular.woff2') format('woff2'),
-	url('font/MaterialIconsSharp-Regular.woff') format('woff');
+		url('font/MaterialIconsSharp-Regular.woff2') format('woff2'),
+		url('font/MaterialIconsSharp-Regular.woff') format('woff');
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
@@ -154,5 +162,8 @@ footer {
 		padding-right: 0;
 		padding-left: 0.5rem;
 	}
-}
 
+	#player-control-group-right {
+		padding: 0;
+	}
+}
