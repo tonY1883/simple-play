@@ -13,9 +13,13 @@ class MusicPlayer {
 	stopButton;
 	trackNameDisplay;
 	timeRemainDisplay;
+	loopButton;
+	randomButton;
 	volumeControl;
 
 	volumeLevel = 1;
+	isLooped = false;
+	isRandom = false;
 
 	constructor() {
 		this.initialize();
@@ -35,29 +39,35 @@ class MusicPlayer {
 
 	loadTrackList(callBack) {
 		console.info('Loading track list');
-		fetch('index.json', {cache: 'no-store'})
-		.then(response => response.json())
-		.then(data => {
-			this.trackList = data;
-		}).then(() => callBack(this))
-		.catch(err => {
-			console.error(err);
-			alert('error: ' + err);
-		});
+		fetch('index.json', { cache: 'no-store' })
+			.then(response => response.json())
+			.then(data => {
+				this.trackList = data;
+			}).then(() => callBack(this))
+			.catch(err => {
+				console.error(err);
+				alert('error: ' + err);
+			});
 	}
 
 	displayTrackList(filter = '') {
 		this.trackListDisplay.innerHTML = '';
 		let newContent = '';
-		this.trackList.filter(t => t.name?.toLowerCase()
-									.includes(filter.trim().toLowerCase()) || t.album?.toLowerCase()
-																			   .includes(filter.trim()
-																							   .toLowerCase()))
-			.forEach((track) => {
-				newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ?
-																																	  track.album + ' / ' :
-																																	  ''}</span> ${track.name}</div>`;
-			});
+		//find exact match first, then append word match.
+		let result = this.trackList.filter(t => t.name.toLowerCase()
+			.includes(filter.trim()
+				.toLowerCase()))
+		result.concat(this.trackList.filter(t => filter.trim()
+			.toLowerCase()
+			.split(' ')
+			.every(kw => t.name?.toLowerCase()
+				.includes(kw) || t.album?.toLowerCase()
+					.includes(kw)) && !!!result.find(rt => rt.index === t.index))
+		).forEach((track) => {
+			newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ?
+				track.album + ' / ' :
+				''}</span> ${track.name}</div>`;
+		});
 		this.trackListDisplay.innerHTML = newContent;
 	}
 
@@ -74,6 +84,22 @@ class MusicPlayer {
 				this.trackNameDisplay.innerText = track.name;
 				this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration);
 				this.currentTrack.oncanplay = undefined;//unset the event
+				if ('mediaSession' in navigator) {
+					navigator.mediaSession.metadata = new MediaMetadata({
+						title: track.name,
+						artist: track.artist,
+						album: track.album
+					});
+					navigator.mediaSession.setActionHandler('play', () => {
+						this.playTrack();
+					});
+					navigator.mediaSession.setActionHandler('pause', () => {
+						this.pauseTrack();
+					});
+					navigator.mediaSession.setActionHandler('stop', () => {
+						this.stopTrack();
+					});
+				}
 			});
 		} else {
 			console.warn(`Track ${index} not found in track list`);
@@ -86,18 +112,41 @@ class MusicPlayer {
 		this.currentTrack.oncanplay = onLoad;
 		this.currentTrack.onerror = () => {
 			console.error('Cannot play selected track: ', this.currentTrack.error);
-			alert('Error occurred while trying to play selected track');
+			if (this.isRandom) {
+				console.warn("Selected track cannot be played, moving on to next track");
+				this.randomSetTrack();
+			} else {
+				alert('Error occurred while trying to play selected track');
+			}
+
 		};
 		this.currentTrack.ontimeupdate = () => {
 			this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration - this.currentTrack.currentTime);
 		};
+		this.currentTrack.onended = () => {
+			if (this.isLooped) {
+				console.info("Looping enabled, restarting playback");
+				this.stopTrack();
+				this.playTrack();
+			} else if (this.isRandom) {
+				// Only move to next track if loop is not enabled
+				console.info("Random enabled, picking next track");
+				this.randomSetTrack();
+
+			}
+		}
 		this.currentTrack.load();
 	}
 
 	playTrack() {
 		if (this.currentTrack) {
 			this.currentTrack.volume = this.volumeLevel;
-			this.currentTrack.play().then(() => console.log('Begin playing selected track')
+			this.currentTrack.play().then(() => {
+				console.log('Begin playing selected track');
+				if (navigator.mediaSession) {
+					navigator.mediaSession.playbackState = 'playing';
+				}
+			}
 			).catch(e => {
 				console.error('Cannot play selected track: ', e);
 				alert('Error occurred while trying to play selected track');
@@ -112,6 +161,9 @@ class MusicPlayer {
 		if (this.currentTrack) {
 			this.currentTrack.currentTime = 0;
 			this.currentTrack.pause();
+			if (navigator.mediaSession) {
+				navigator.mediaSession.playbackState = 'paused';
+			}
 			console.info('Stopped playback');
 		}
 	}
@@ -119,6 +171,9 @@ class MusicPlayer {
 	pauseTrack() {
 		if (this.currentTrack) {
 			this.currentTrack.pause();
+			if (navigator.mediaSession) {
+				navigator.mediaSession.playbackState = 'paused';
+			}
 			console.info('Paused playback');
 		}
 	}
@@ -131,15 +186,49 @@ class MusicPlayer {
 		}
 	}
 
+	toggleLooping() {
+		this.isLooped = !this.isLooped;
+		this.updateLoopingDisplay();
+	}
+
+	updateLoopingDisplay() {
+		if (this.isLooped) {
+			this.loopButton.style.opacity = "1";
+		} else {
+			this.loopButton.style.opacity = "0.4";
+		}
+	}
+
+	toggleRandom() {
+		this.isRandom = !this.isRandom;
+		this.updateRandomDisplay();
+	}
+
+	updateRandomDisplay() {
+		if (this.isRandom) {
+			this.randomButton.style.opacity = "1";
+		} else {
+			this.randomButton.style.opacity = "0.4";
+		}
+	}
+
+	randomSetTrack() {
+		this.setTrack(this.trackList[Math.floor(Math.random() * this.trackList.length)].index)
+	}
+
 	initialize() {
 		this.playButton = document.querySelector('#music-play-button');
 		this.pauseButton = document.querySelector('#music-pause-button');
 		this.stopButton = document.querySelector('#music-stop-button');
+		this.loopButton = document.querySelector('#music-loop-button');
+		this.randomButton = document.querySelector('#music-random-button');
 		this.trackNameDisplay = document.querySelector('#player-name');
 		this.timeRemainDisplay = document.querySelector('#player-remaining-time');
 		this.playButton.addEventListener('click', (e) => this.playTrack());
 		this.stopButton.addEventListener('click', (e) => this.stopTrack());
 		this.pauseButton.addEventListener('click', (e) => this.pauseTrack());
+		this.loopButton.addEventListener('click', (e) => this.toggleLooping());
+		this.randomButton.addEventListener('click', (e) => this.toggleRandom());
 		this.trackListDisplay = document.querySelector('#track-list');
 		this.volumeControl = document.querySelector('#volume-control');
 		this.volumeControl.addEventListener('input', (e) => this.setVolume(e.target.value));
@@ -148,6 +237,8 @@ class MusicPlayer {
 			'input',
 			(e) => this.displayTrackList(e.target.value)
 		);
+		this.updateLoopingDisplay();
+		this.updateRandomDisplay();
 	}
 }
 
