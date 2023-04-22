@@ -5,6 +5,7 @@ from pathlib import Path
 import mutagen
 import json
 from tqdm import tqdm
+import urllib.parse
 
 dir_name = sys.argv[1]
 
@@ -24,7 +25,7 @@ for idx, file in enumerate(files, start = 1):
 			audio = mutagen.File(str(file), easy = True)
 			data = {}
 			data["index"] = idx
-			data["src"] = str(file)
+			data["src"] = urllib.parse.quote(str(file))
 			if 'title' in audio:
 				pbar.set_description(str(audio['title'][0]))
 				data["name"] = audio['title'][0]
