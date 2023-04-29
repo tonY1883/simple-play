@@ -15,7 +15,7 @@ for streaming music over a LAN, allowing any device in the network to play the s
 ## Dependencies
 
 1. Any HTTP server
-2. Python 3 with Mutagen (For indexing audio tracks)
+2. Python 3 with Mutagen and `tqdm` (For indexing audio tracks)
 
 ## Setup
 
