@@ -127,8 +127,7 @@ footer {
 @font-face {
 	font-family: 'Material Icons Sharp';
 	src: local('MaterialIconsSharp-Regular'),
-		url('font/MaterialIconsSharp-Regular.woff2') format('woff2'),
-		url('font/MaterialIconsSharp-Regular.woff') format('woff');
+		url('font/MaterialIconsSharp-Regular.otf') format("opentype");
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
