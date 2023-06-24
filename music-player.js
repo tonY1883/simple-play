@@ -18,7 +18,6 @@ class MusicPlayer {
 	volumeControl;
 
 	volumeLevel = 1;
-	isLooped = false;
 	isRandom = false;
 
 	constructor() {
@@ -108,7 +107,7 @@ class MusicPlayer {
 
 	loadTrack(path, onLoad) {
 		console.info('Loading track: ', path);
-		this.currentTrack = new Audio(path);
+		this.currentTrack.src = path;
 		this.currentTrack.oncanplay = onLoad;
 		this.currentTrack.onerror = () => {
 			console.error('Cannot play selected track: ', this.currentTrack.error);
@@ -124,10 +123,8 @@ class MusicPlayer {
 			this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration - this.currentTrack.currentTime);
 		};
 		this.currentTrack.onended = () => {
-			if (this.isLooped) {
+			if (this.currentTrack.loop) {
 				console.info("Looping enabled, restarting playback");
-				this.stopTrack();
-				this.playTrack();
 			} else if (this.isRandom) {
 				// Only move to next track if loop is not enabled
 				console.info("Random enabled, picking next track");
@@ -187,12 +184,12 @@ class MusicPlayer {
 	}
 
 	toggleLooping() {
-		this.isLooped = !this.isLooped;
+		this.currentTrack.loop = !this.currentTrack.loop;
 		this.updateLoopingDisplay();
 	}
 
 	updateLoopingDisplay() {
-		if (this.isLooped) {
+		if (this.currentTrack?.loop) {
 			this.loopButton.style.opacity = "1";
 		} else {
 			this.loopButton.style.opacity = "0.4";
@@ -237,6 +234,7 @@ class MusicPlayer {
 			'input',
 			(e) => this.displayTrackList(e.target.value)
 		);
+		this.currentTrack = new Audio();
 		this.updateLoopingDisplay();
 		this.updateRandomDisplay();
 	}
