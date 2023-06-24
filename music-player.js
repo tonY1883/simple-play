@@ -185,6 +185,7 @@ class MusicPlayer {
 
 	toggleLooping() {
 		this.currentTrack.loop = !this.currentTrack.loop;
+		console.info("Looping enabled:", this.currentTrack.loop)
 		this.updateLoopingDisplay();
 	}
 
