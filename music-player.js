@@ -36,6 +36,18 @@ class MusicPlayer {
 		].filter(Boolean).join(':');
 	}
 
+	static trackSorter(a, b) {
+		if (!!a.album && !!b.album) {
+			return a.album < b.album ? -1 : a.album > b.album ? 1 : a.index - b.index;
+		} else if (!!a.album) {
+			return 1;
+		} else if (!!b.album) {
+			return -1;
+		} else {
+			return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+		}
+	}
+
 	loadTrackList(callBack) {
 		console.info('Loading track list');
 		fetch('index.json', { cache: 'no-store' })
@@ -56,12 +68,14 @@ class MusicPlayer {
 		let result = this.trackList.filter(t => t.name.toLowerCase()
 			.includes(filter.trim()
 				.toLowerCase()))
+			.sort(MusicPlayer.trackSorter)
 		result.concat(this.trackList.filter(t => filter.trim()
 			.toLowerCase()
 			.split(' ')
 			.every(kw => t.name?.toLowerCase()
 				.includes(kw) || t.album?.toLowerCase()
 					.includes(kw)) && !!!result.find(rt => rt.index === t.index))
+			.sort(MusicPlayer.trackSorter)
 		).forEach((track) => {
 			newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ?
 				track.album + ' / ' :
