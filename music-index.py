@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import itertools
 import sys
 import os
 from pathlib import Path
@@ -12,10 +13,10 @@ dir_name = sys.argv[1]
 tracks = []
 
 #Only select formats currently supported by browsers
-files = list(Path(dir_name).rglob('*.flac')) + list(Path(dir_name).rglob('*.m4a')) + list(
-	Path(dir_name).rglob('*.ogg')) + list(Path(dir_name).rglob('*.webm')) + list(
-	Path(dir_name).rglob('*.mp3')) + list(Path(dir_name).rglob('*.aac')) + list(
-	Path(dir_name).rglob('*.wav'))
+accept_file_formats = [
+	'*.flac', '*.m4a', '*.ogg', '*.webm', '*.mp3', '*.webm', '*.mp3', '*.aac', '*.wav'
+]
+files = list(itertools.chain.from_iterable(map((lambda x: list(Path(dir_name).rglob(x))), accept_file_formats)))
 total_count = len(files)
 pbar = tqdm(total = total_count, leave = True)
 for idx, file in enumerate(files, start = 1):
