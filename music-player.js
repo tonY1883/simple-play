@@ -17,7 +17,7 @@ class MusicPlayer {
     }
     static trackSorter(a, b) {
         if (!!a.album && !!b.album) {
-            return a.album < b.album ? -1 : a.album > b.album ? 1 : a.index - b.index;
+            return a.album < b.album ? -1 : a.album > b.album ? 1 : a.albumIndex - b.albumIndex;
         }
         else if (!!a.album) {
             return 1;

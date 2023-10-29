@@ -30,8 +30,12 @@ for idx, file in enumerate(files, start = 1):
 			if 'title' in audio:
 				pbar.set_description(str(audio['title'][0]))
 				data["name"] = audio['title'][0]
-				data["artist"] = audio['artist'][0]
-				data["album"] = audio['album'][0]
+				if 'artist' in audio:
+					data["artist"] = audio['artist'][0]
+				if 'album' in audio:
+					data["album"] = audio['album'][0]
+				if 'tracknumber' in audio:
+					data["albumIndex"] = int(audio['tracknumber'][0])
 			else:
 				pbar.set_description(file.stem)
 				data["name"] = file.stem
