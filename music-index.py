@@ -40,7 +40,8 @@ for idx, file in enumerate(files, start = 1):
 				pbar.set_description(file.stem)
 				data["name"] = file.stem
 			tracks.append(data)
-	except:
+	except Exception as e:
 		print("Fail to read " + str(file))
+		print(e)
 with open('index.json', 'w', encoding = 'utf8') as fp:
 	json.dump(tracks, fp, ensure_ascii = False)
