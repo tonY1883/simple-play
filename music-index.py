@@ -14,7 +14,7 @@ tracks = []
 
 #Only select formats currently supported by browsers
 accept_file_formats = [
-	'*.flac', '*.m4a', '*.ogg', '*.webm', '*.mp3', '*.webm', '*.mp3', '*.aac', '*.wav'
+	'*.flac', '*.m4a', '*.ogg', '*.webm', '*.mp3', '*.webm', '*.aac', '*.wav'
 ]
 files = list(itertools.chain.from_iterable(map((lambda x: list(Path(dir_name).rglob(x))), accept_file_formats)))
 total_count = len(files)
