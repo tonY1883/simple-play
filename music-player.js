@@ -2,6 +2,7 @@ class MusicPlayer {
     constructor() {
         this.volumeLevel = 1;
         this.isRandom = false;
+        this.VOLUME_CONTROL_STEPS = 255;
         this.initialize();
     }
     static formatTime(duration) {
@@ -29,13 +30,13 @@ class MusicPlayer {
             return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
         }
     }
-    loadTrackList(callBack) {
+    loadTrackList(onLoadedCallback) {
         console.info('Loading track list');
         fetch('index.json', { cache: 'no-store' })
             .then(response => response.json())
             .then(data => {
             this.trackList = data;
-        }).then(() => callBack(this))
+        }).then(() => onLoadedCallback(this))
             .catch(err => {
             console.error(err);
             alert('error: ' + err);
@@ -164,11 +165,20 @@ class MusicPlayer {
         }
     }
     setVolume(value) {
+        value = Math.max(0, Math.min(1, value)); //clamp value to valid range
         console.info(`Setting volume to ${value}x`);
         this.volumeLevel = value;
         if (this.currentTrack) {
             this.currentTrack.volume = this.volumeLevel;
         }
+    }
+    changeVolumeByStep(increase) {
+        let change = 100 / this.VOLUME_CONTROL_STEPS / 100;
+        if (!increase) {
+            change = 0 - change;
+        }
+        this.setVolume(this.volumeLevel + change);
+        this.volumeControl.value = this.volumeLevel.toString();
     }
     toggleLooping() {
         this.currentTrack.loop = !this.currentTrack.loop;
@@ -214,7 +224,13 @@ class MusicPlayer {
         this.randomButton.addEventListener('click', (e) => this.toggleRandom());
         this.trackListDisplay = document.querySelector('#track-list');
         this.volumeControl = document.querySelector('#volume-control');
+        this.volumeControl.step = (100 / this.VOLUME_CONTROL_STEPS / 100).toString();
         this.volumeControl.addEventListener('input', (e) => this.setVolume(Number(this.volumeControl.value)));
+        this.volumeControl.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.changeVolumeByStep(e.deltaY < 0);
+        });
         this.trackSearchInput = document.querySelector('#track-search-input');
         this.trackSearchInput.addEventListener('input', (e) => this.displayTrackList(this.trackSearchInput.value));
         this.currentTrack = new Audio();
