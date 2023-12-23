@@ -3,6 +3,7 @@ class MusicPlayer {
         this.volumeLevel = 1;
         this.isRandom = false;
         this.VOLUME_CONTROL_STEPS = 255;
+        this.VOLUME_PERSISTENCE_KEY = "volume";
         this.initialize();
     }
     static formatTime(duration) {
@@ -171,6 +172,7 @@ class MusicPlayer {
         if (this.currentTrack) {
             this.currentTrack.volume = this.volumeLevel;
         }
+        localStorage.setItem(this.VOLUME_PERSISTENCE_KEY, value.toString());
     }
     changeVolumeByStep(increase) {
         let change = 100 / this.VOLUME_CONTROL_STEPS / 100;
@@ -225,6 +227,9 @@ class MusicPlayer {
         this.trackListDisplay = document.querySelector('#track-list');
         this.volumeControl = document.querySelector('#volume-control');
         this.volumeControl.step = (100 / this.VOLUME_CONTROL_STEPS / 100).toString();
+        const initialVolume = Number(localStorage.getItem(this.VOLUME_PERSISTENCE_KEY)) || Number(this.volumeControl.value);
+        this.setVolume(initialVolume); //initialize from stored value
+        this.volumeControl.value = this.volumeControl.toString();
         this.volumeControl.addEventListener('input', (e) => this.setVolume(Number(this.volumeControl.value)));
         this.volumeControl.addEventListener('wheel', (e) => {
             e.preventDefault();
