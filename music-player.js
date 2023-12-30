@@ -104,29 +104,6 @@ class MusicPlayer {
         console.info('Loading track: ', path);
         this.currentTrack.src = path;
         this.currentTrack.oncanplay = onLoad;
-        this.currentTrack.onerror = () => {
-            console.error('Cannot play selected track: ', this.currentTrack.error);
-            if (this.isRandom) {
-                console.warn("Selected track cannot be played, moving on to next track");
-                this.randomSetTrack();
-            }
-            else {
-                alert('Error occurred while trying to play selected track');
-            }
-        };
-        this.currentTrack.ontimeupdate = () => {
-            this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration - this.currentTrack.currentTime);
-        };
-        this.currentTrack.onended = () => {
-            if (this.currentTrack.loop) {
-                console.info("Looping enabled, restarting playback");
-            }
-            else if (this.isRandom) {
-                // Only move to next track if loop is not enabled
-                console.info("Random enabled, picking next track");
-                this.randomSetTrack();
-            }
-        };
         this.currentTrack.load();
     }
     playTrack() {
@@ -212,6 +189,7 @@ class MusicPlayer {
         this.setTrack(this.trackList[Math.floor(Math.random() * this.trackList.length)].index);
     }
     initialize() {
+        //get all HTML elements
         this.playButton = document.querySelector('#music-play-button');
         this.pauseButton = document.querySelector('#music-pause-button');
         this.stopButton = document.querySelector('#music-stop-button');
@@ -226,6 +204,8 @@ class MusicPlayer {
         this.randomButton.addEventListener('click', (e) => this.toggleRandom());
         this.trackListDisplay = document.querySelector('#track-list');
         this.volumeControl = document.querySelector('#volume-control');
+        this.trackSearchInput = document.querySelector('#track-search-input');
+        //setup volume setting
         this.volumeControl.step = (100 / this.VOLUME_CONTROL_STEPS / 100).toString();
         const initialVolume = Number(localStorage.getItem(this.VOLUME_PERSISTENCE_KEY)) || Number(this.volumeControl.value);
         this.setVolume(initialVolume); //initialize from stored value
@@ -236,9 +216,34 @@ class MusicPlayer {
             e.stopPropagation();
             this.changeVolumeByStep(e.deltaY < 0);
         });
-        this.trackSearchInput = document.querySelector('#track-search-input');
+        //setup searching
         this.trackSearchInput.addEventListener('input', (e) => this.displayTrackList(this.trackSearchInput.value));
+        //setup media
         this.currentTrack = new Audio();
+        this.currentTrack.onerror = () => {
+            console.error('Cannot play selected track: ', this.currentTrack.error);
+            if (this.isRandom) {
+                console.warn("Selected track cannot be played, moving on to next track");
+                this.randomSetTrack();
+            }
+            else {
+                alert('Error occurred while trying to play selected track');
+            }
+        };
+        this.currentTrack.ontimeupdate = () => {
+            this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration - this.currentTrack.currentTime);
+        };
+        this.currentTrack.onended = () => {
+            if (this.currentTrack.loop) {
+                console.info("Looping enabled, restarting playback");
+            }
+            else if (this.isRandom) {
+                // Only move to next track if loop is not enabled
+                console.info("Random enabled, picking next track");
+                this.randomSetTrack();
+            }
+        };
+        //initialise display
         this.updateLoopingDisplay();
         this.updateRandomDisplay();
     }
