@@ -97,10 +97,7 @@ footer {
 	white-space: nowrap;
 }
 
-
-/* material icons setting https://developers.google.com/fonts/docs/material_icons#icon_font_for_the_web */
-.material-icons {
-	font-family: 'Material Icons Sharp';
+.icons {
 	font-weight: normal;
 	font-style: normal;
 	font-size: 24px;
@@ -113,27 +110,6 @@ footer {
 	word-wrap: normal;
 	white-space: nowrap;
 	direction: ltr;
-
-	/* Support for all WebKit browsers. */
-	-webkit-font-smoothing: antialiased;
-	/* Support for Safari and Chrome. */
-	text-rendering: optimizeLegibility;
-
-	/* Support for Firefox. */
-	-moz-osx-font-smoothing: grayscale;
-
-	/* Support for IE. */
-	font-feature-settings: 'liga';
-}
-
-@font-face {
-	font-family: 'Material Icons Sharp';
-	src: local('MaterialIconsSharp-Regular'),
-		url('font/MaterialIconsSharp-Regular.woff2') format('woff2'),
-		url('font/MaterialIconsSharp-Regular.woff') format('woff');
-	font-weight: normal;
-	font-style: normal;
-	font-display: swap;
 }
 
 @media only screen and (max-width: 530px) {
