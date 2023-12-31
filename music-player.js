@@ -7,6 +7,9 @@ class MusicPlayer {
         this.initialize();
     }
     static formatTime(duration) {
+        if (isNaN(duration)) {
+            return null;
+        }
         //base on https://stackoverflow.com/a/40350003
         const hour = Math.floor(duration / 3600);
         const minute = Math.floor((duration % 3600) / 60);
@@ -142,6 +145,26 @@ class MusicPlayer {
             console.info('Paused playback');
         }
     }
+    getCurrentTrackDuration() {
+        var _a;
+        if ((_a = this.currentTrack) === null || _a === void 0 ? void 0 : _a.duration) {
+            return this.currentTrack.duration;
+        }
+        return null;
+    }
+    getCurrentTrackPlaybackTime() {
+        var _a;
+        if ((_a = this.currentTrack) === null || _a === void 0 ? void 0 : _a.duration) {
+            return this.currentTrack.currentTime;
+        }
+        return null;
+    }
+    getCurrentTrackRemainingTime() {
+        if (this.getCurrentTrackPlaybackTime() && this.getCurrentTrackDuration()) {
+            return this.getCurrentTrackDuration() - this.getCurrentTrackPlaybackTime();
+        }
+        return null;
+    }
     setVolume(value) {
         value = Math.max(0, Math.min(1, value)); //clamp value to valid range
         console.info(`Setting volume to ${value}x`);
@@ -197,14 +220,15 @@ class MusicPlayer {
         this.randomButton = document.querySelector('#music-random-button');
         this.trackNameDisplay = document.querySelector('#player-name');
         this.timeRemainDisplay = document.querySelector('#player-remaining-time');
-        this.playButton.addEventListener('click', (e) => this.playTrack());
-        this.stopButton.addEventListener('click', (e) => this.stopTrack());
-        this.pauseButton.addEventListener('click', (e) => this.pauseTrack());
-        this.loopButton.addEventListener('click', (e) => this.toggleLooping());
-        this.randomButton.addEventListener('click', (e) => this.toggleRandom());
         this.trackListDisplay = document.querySelector('#track-list');
         this.volumeControl = document.querySelector('#volume-control');
         this.trackSearchInput = document.querySelector('#track-search-input');
+        //setup playback control
+        this.playButton.addEventListener('click', () => this.playTrack());
+        this.stopButton.addEventListener('click', () => this.stopTrack());
+        this.pauseButton.addEventListener('click', () => this.pauseTrack());
+        this.loopButton.addEventListener('click', () => this.toggleLooping());
+        this.randomButton.addEventListener('click', () => this.toggleRandom());
         //setup volume setting
         this.volumeControl.step = (100 / this.VOLUME_CONTROL_STEPS / 100).toString();
         const initialVolume = Number(localStorage.getItem(this.VOLUME_PERSISTENCE_KEY)) || Number(this.volumeControl.value);
@@ -231,7 +255,8 @@ class MusicPlayer {
             }
         };
         this.currentTrack.ontimeupdate = () => {
-            this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration - this.currentTrack.currentTime);
+            var _a;
+            this.timeRemainDisplay.innerText = (_a = MusicPlayer.formatTime(this.getCurrentTrackRemainingTime())) !== null && _a !== void 0 ? _a : '';
         };
         this.currentTrack.onended = () => {
             if (this.currentTrack.loop) {
