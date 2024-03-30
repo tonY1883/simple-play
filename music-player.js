@@ -44,6 +44,7 @@ class MusicPlayer {
             .catch(err => {
             console.error(err);
             alert('error: ' + err);
+            this.loadTrackList(onLoadedCallback);
         });
     }
     displayTrackList(filter = '') {
