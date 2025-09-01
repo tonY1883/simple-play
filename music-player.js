@@ -4,50 +4,50 @@ class MusicPlayer {
         this.volumeLevel = 1;
         this.isRandom = false;
         //get all HTML elements
-        this.playButton = document.querySelector('#music-play-button');
-        this.pauseButton = document.querySelector('#music-pause-button');
-        this.stopButton = document.querySelector('#music-stop-button');
-        this.loopButton = document.querySelector('#music-loop-button');
-        this.randomButton = document.querySelector('#music-random-button');
-        this.trackNameDisplay = document.querySelector('#player-name');
-        this.timeRemainDisplay = document.querySelector('#player-remaining-time');
-        this.trackListDisplay = document.querySelector('#track-list');
-        this.volumeControl = document.querySelector('#volume-control');
-        this.trackSearchInput = document.querySelector('#track-search-input');
+        this.playButton = document.querySelector("#music-play-button");
+        this.pauseButton = document.querySelector("#music-pause-button");
+        this.stopButton = document.querySelector("#music-stop-button");
+        this.loopButton = document.querySelector("#music-loop-button");
+        this.randomButton = document.querySelector("#music-random-button");
+        this.trackNameDisplay = document.querySelector("#player-name");
+        this.timeRemainDisplay = document.querySelector("#player-remaining-time");
+        this.trackListDisplay = document.querySelector("#track-list");
+        this.volumeControl = document.querySelector("#volume-control");
+        this.trackSearchInput = document.querySelector("#track-search-input");
         //setup playback control
-        this.playButton.addEventListener('click', () => this.playTrack());
-        this.stopButton.addEventListener('click', () => this.stopTrack());
-        this.pauseButton.addEventListener('click', () => this.pauseTrack());
-        this.loopButton.addEventListener('click', () => this.toggleLooping());
-        this.randomButton.addEventListener('click', () => this.toggleRandom());
+        this.playButton.addEventListener("click", () => this.playTrack());
+        this.stopButton.addEventListener("click", () => this.stopTrack());
+        this.pauseButton.addEventListener("click", () => this.pauseTrack());
+        this.loopButton.addEventListener("click", () => this.toggleLooping());
+        this.randomButton.addEventListener("click", () => this.toggleRandom());
         //setup volume setting
         this.volumeControl.step = (100 / MusicPlayer.VOLUME_CONTROL_STEPS / 100).toString();
         const initialVolume = Number(localStorage.getItem(MusicPlayer.VOLUME_PERSISTENCE_KEY)) || Number(this.volumeControl.value);
         this.setVolume(initialVolume); //initialize from stored value
         this.volumeControl.value = this.volumeControl.toString();
-        this.volumeControl.addEventListener('input', (e) => this.setVolume(Number(this.volumeControl.value)));
-        this.volumeControl.addEventListener('wheel', (e) => {
+        this.volumeControl.addEventListener("input", (e) => this.setVolume(Number(this.volumeControl.value)));
+        this.volumeControl.addEventListener("wheel", (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.changeVolumeByStep(e.deltaY < 0);
         });
         //setup searching
-        this.trackSearchInput.addEventListener('input', (e) => this.displayTrackList(this.trackSearchInput.value));
+        this.trackSearchInput.addEventListener("input", (e) => this.displayTrackList(this.trackSearchInput.value));
         //setup media
         this.currentTrack = new Audio();
         this.currentTrack.onerror = () => {
-            console.error('Cannot play selected track: ', this.currentTrack.error);
+            console.error("Cannot play selected track: ", this.currentTrack.error);
             if (this.isRandom) {
                 console.warn("Selected track cannot be played, moving on to next track");
                 this.randomSetTrack();
             }
             else {
-                alert('Error occurred while trying to play selected track');
+                alert("Error occurred while trying to play selected track");
             }
         };
         this.currentTrack.ontimeupdate = () => {
             var _a;
-            this.timeRemainDisplay.innerText = (_a = MusicPlayer.formatTime(this.getCurrentTrackRemainingTime())) !== null && _a !== void 0 ? _a : '';
+            this.timeRemainDisplay.innerText = (_a = MusicPlayer.formatTime(this.getCurrentTrackRemainingTime())) !== null && _a !== void 0 ? _a : "";
         };
         this.currentTrack.onended = () => {
             if (this.currentTrack.loop) {
@@ -71,11 +71,9 @@ class MusicPlayer {
         const hour = Math.floor(duration / 3600);
         const minute = Math.floor((duration % 3600) / 60);
         const second = Math.floor(duration % 60);
-        return [
-            hour,
-            minute > 9 ? minute : (hour ? '0' + minute : minute || '0'),
-            second > 9 ? second : '0' + second
-        ].filter(Boolean).join(':');
+        return [hour, minute > 9 ? minute : hour ? "0" + minute : minute || "0", second > 9 ? second : "0" + second]
+            .filter(Boolean)
+            .join(":");
     }
     static trackSorter(a, b) {
         if (!!a.album && !!b.album) {
@@ -91,50 +89,67 @@ class MusicPlayer {
             return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
         }
     }
-    loadTrackList(path) {
-        console.info('Loading track list');
-        fetch(path, { cache: 'no-store' })
-            .then(response => response.json())
-            .then(data => {
-            this.trackList = data;
-        }).then(() => this.displayTrackList())
-            .catch(err => {
+    loadTrackList() {
+        console.info("Loading track list");
+        fetch("checksum.txt", { cache: "no-store" })
+            .then((response) => response.text())
+            .then((checksum) => {
+            console.debug("current index signature: " + checksum);
+            const currentChecksum = localStorage.getItem(MusicPlayer.INDEX_HASH_KEY);
+            localStorage.setItem(MusicPlayer.INDEX_HASH_KEY, checksum);
+            if (currentChecksum !== checksum || !!!localStorage.getItem(MusicPlayer.INDEX_KEY)) {
+                console.info("Index outdated or missing, downloading new index");
+                return fetch("index.json", { cache: "no-store" })
+                    .then((response) => response.text())
+                    .then((data) => {
+                    localStorage.setItem(MusicPlayer.INDEX_KEY, data);
+                    return data;
+                });
+            }
+            else {
+                return new Promise((resolve) => resolve(localStorage.getItem(MusicPlayer.INDEX_KEY)));
+            }
+        })
+            .then((data) => {
+            this.trackList = JSON.parse(data);
+        })
+            .then(() => this.displayTrackList())
+            .catch((err) => {
             console.error(err);
-            alert('error: ' + err);
-            this.loadTrackList(path);
+            alert("error: " + err);
+            this.loadTrackList();
         });
     }
-    displayTrackList(filter = '') {
-        this.trackListDisplay.innerHTML = '';
+    displayTrackList(filter = "") {
+        this.trackListDisplay.innerHTML = "";
         if (this.trackList) {
-            let newContent = '';
+            let newContent = "";
             //find exact match first, then append word match.
-            let result = this.trackList.filter(t => t.name.toLowerCase()
-                .includes(filter.trim()
-                .toLowerCase()))
+            let result = this.trackList
+                .filter((t) => t.name.toLowerCase().includes(filter.trim().toLowerCase()))
                 .sort(MusicPlayer.trackSorter);
-            result.concat(this.trackList.filter(t => filter.trim()
+            result
+                .concat(this.trackList
+                .filter((t) => filter
+                .trim()
                 .toLowerCase()
-                .split(' ')
-                .every(kw => {
-                var _a, _b;
-                return ((_a = t.name) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(kw)) || ((_b = t.album) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes(kw));
-            }) && !!!result.find(rt => rt.index === t.index))
-                .sort(MusicPlayer.trackSorter)).forEach((track) => {
-                newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ?
-                    track.album + ' / ' :
-                    ''}</span> ${track.name}</div>`;
+                .split(" ")
+                .every((kw) => { var _a, _b; return ((_a = t.name) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(kw)) || ((_b = t.album) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes(kw)); }) &&
+                !!!result.find((rt) => rt.index === t.index))
+                .sort(MusicPlayer.trackSorter))
+                .forEach((track) => {
+                newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ? track.album + " / " : ""}</span> ${track.name}</div>`;
             });
             this.trackListDisplay.innerHTML = newContent;
         }
     }
     setTrack(index) {
         var _a;
-        let track = (_a = this.trackList) === null || _a === void 0 ? void 0 : _a.find(t => t.index === index);
+        let track = (_a = this.trackList) === null || _a === void 0 ? void 0 : _a.find((t) => t.index === index);
         if (!!track) {
             //unset the current track first
             if (this.currentTrack && !this.currentTrack.paused) {
-                console.info('Current track not stooped, stopping');
+                console.info("Current track not stooped, stopping");
                 this.currentTrack.pause();
             }
             this.loadTrack(track.src, () => {
@@ -142,19 +157,19 @@ class MusicPlayer {
                 this.trackNameDisplay.innerText = track.name;
                 this.timeRemainDisplay.innerText = MusicPlayer.formatTime(this.currentTrack.duration);
                 this.currentTrack.oncanplay = null; //unset the event
-                if ('mediaSession' in navigator) {
+                if ("mediaSession" in navigator) {
                     navigator.mediaSession.metadata = new MediaMetadata({
                         title: track.name,
                         artist: track.artist,
-                        album: track.album
+                        album: track.album,
                     });
-                    navigator.mediaSession.setActionHandler('play', () => {
+                    navigator.mediaSession.setActionHandler("play", () => {
                         this.playTrack();
                     });
-                    navigator.mediaSession.setActionHandler('pause', () => {
+                    navigator.mediaSession.setActionHandler("pause", () => {
                         this.pauseTrack();
                     });
-                    navigator.mediaSession.setActionHandler('stop', () => {
+                    navigator.mediaSession.setActionHandler("stop", () => {
                         this.stopTrack();
                     });
                 }
@@ -165,7 +180,7 @@ class MusicPlayer {
         }
     }
     loadTrack(path, onLoad) {
-        console.info('Loading track: ', path);
+        console.info("Loading track: ", path);
         this.currentTrack.src = path;
         this.currentTrack.oncanplay = onLoad;
         this.currentTrack.load();
@@ -173,18 +188,21 @@ class MusicPlayer {
     playTrack() {
         if (this.currentTrack) {
             this.currentTrack.volume = this.volumeLevel;
-            this.currentTrack.play().then(() => {
-                console.log('Begin playing selected track');
+            this.currentTrack
+                .play()
+                .then(() => {
+                console.log("Begin playing selected track");
                 if (navigator.mediaSession) {
-                    navigator.mediaSession.playbackState = 'playing';
+                    navigator.mediaSession.playbackState = "playing";
                 }
-            }).catch(e => {
-                console.error('Cannot play selected track: ', e);
-                alert('Error occurred while trying to play selected track');
+            })
+                .catch((e) => {
+                console.error("Cannot play selected track: ", e);
+                alert("Error occurred while trying to play selected track");
             });
         }
         else {
-            console.warn('Track not set, will not play');
+            console.warn("Track not set, will not play");
         }
     }
     stopTrack() {
@@ -192,18 +210,18 @@ class MusicPlayer {
             this.currentTrack.currentTime = 0;
             this.currentTrack.pause();
             if (navigator.mediaSession) {
-                navigator.mediaSession.playbackState = 'paused';
+                navigator.mediaSession.playbackState = "paused";
             }
-            console.info('Stopped playback');
+            console.info("Stopped playback");
         }
     }
     pauseTrack() {
         if (this.currentTrack) {
             this.currentTrack.pause();
             if (navigator.mediaSession) {
-                navigator.mediaSession.playbackState = 'paused';
+                navigator.mediaSession.playbackState = "paused";
             }
-            console.info('Paused playback');
+            console.info("Paused playback");
         }
     }
     getAudioTrack() {
@@ -280,8 +298,10 @@ class MusicPlayer {
 }
 MusicPlayer.VOLUME_CONTROL_STEPS = 255;
 MusicPlayer.VOLUME_PERSISTENCE_KEY = "volume";
+MusicPlayer.INDEX_KEY = "index";
+MusicPlayer.INDEX_HASH_KEY = "index-hash";
 let musicPlayer;
-window.addEventListener('load', () => {
+window.addEventListener("load", () => {
     musicPlayer = new MusicPlayer();
-    musicPlayer.loadTrackList('index.json');
+    musicPlayer.loadTrackList();
 });
