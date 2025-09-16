@@ -1,5 +1,6 @@
 "use strict";
 class MusicPlayer {
+    #dBHelper;
     #currentTrack;
     #trackList;
     #trackSearchInput;
@@ -52,6 +53,7 @@ class MusicPlayer {
         //setup searching
         this.#trackSearchInput.addEventListener("input", (e) => this.displayTrackList(this.#trackSearchInput.value));
         //setup media
+        this.#dBHelper = new MusicDBHelper("music_index");
         this.#currentTrack = new Audio();
         this.#currentTrack.onerror = () => {
             console.error("Cannot play selected track: ", this.#currentTrack.error);
@@ -108,28 +110,30 @@ class MusicPlayer {
     }
     loadTrackList() {
         console.info("Loading track list");
-        fetch("checksum.txt", { cache: "no-store" })
+        this.#dBHelper
+            .open()
+            .then(() => fetch("checksum.txt", { cache: "no-store" }))
             .then((response) => response.text())
             .then((checksum) => {
             console.debug("current index signature: " + checksum);
             const currentChecksum = localStorage.getItem(MusicPlayer.INDEX_HASH_KEY);
             localStorage.setItem(MusicPlayer.INDEX_HASH_KEY, checksum);
-            if (currentChecksum !== checksum || !!!localStorage.getItem(MusicPlayer.INDEX_KEY)) {
+            if (currentChecksum !== checksum) {
                 console.info("Index outdated or missing, downloading new index");
-                return fetch("index.json", { cache: "no-store" })
-                    .then((response) => response.text())
-                    .then((data) => {
-                    localStorage.setItem(MusicPlayer.INDEX_KEY, data);
-                    return data;
+                return this.#dBHelper
+                    .clearIndex()
+                    .then(() => fetch("index.json", { cache: "no-store" }))
+                    .then((response) => response.json())
+                    .then(async (tracks) => {
+                    await this.#dBHelper.updateMusicIndex(tracks);
                 });
             }
             else {
-                return new Promise((resolve) => resolve(localStorage.getItem(MusicPlayer.INDEX_KEY)));
+                return Promise.resolve();
             }
         })
-            .then((data) => {
-            this.#trackList = JSON.parse(data);
-        })
+            .then(() => this.#dBHelper.getAllMusics())
+            .then((data) => (this.#trackList = data))
             .then(() => this.displayTrackList())
             .catch((err) => {
             console.error(err);
@@ -307,6 +311,231 @@ class MusicPlayer {
         if (!!this.#trackList) {
             this.setTrack(this.#trackList[Math.floor(Math.random() * this.#trackList.length)].index);
         }
+    }
+}
+class IndexdDBHelper {
+    #dbName;
+    #dbVersion;
+    #dbInstance;
+    constructor(name, version = 1) {
+        this.#dbName = name;
+        this.#dbVersion = version;
+    }
+    onUpgrade(db, oldVersion, newVersion) { }
+    onDelete(db) { }
+    onOpen(db) { }
+    onError(err) {
+        throw err;
+    }
+    /** Throws error if database is not open */
+    async requiresOpenDatabase() {
+        if (!!!this.activeDatabase) {
+            throw new Error("No open database for operation");
+        }
+    }
+    insert(data, store) {
+        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+            const transaction = this.activeDatabase.transaction(store, "readwrite");
+            const resultKeys = new Array();
+            transaction.oncomplete = (event) => {
+                resolve(resultKeys);
+            };
+            transaction.onerror = (event) => {
+                reject(event.target.error);
+            };
+            const objectStore = transaction.objectStore(store);
+            data.forEach((datum) => {
+                const request = objectStore.add(datum);
+                request.onsuccess = (event) => {
+                    resultKeys.push(event.target.result);
+                };
+            });
+        }));
+    }
+    update(data, store) {
+        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+            const transaction = this.activeDatabase.transaction(store, "readwrite");
+            const resultKeys = new Array();
+            transaction.oncomplete = (event) => {
+                resolve(resultKeys);
+            };
+            transaction.onerror = (event) => {
+                reject(event.target.error);
+            };
+            const objectStore = transaction.objectStore(store);
+            data.forEach((datum) => {
+                const request = objectStore.put(datum);
+                request.onsuccess = (event) => {
+                    resultKeys.push(event.target.result);
+                };
+            });
+        }));
+    }
+    select(key, store, onError) {
+        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+            const objectStore = this.activeDatabase.transaction(store).objectStore(store);
+            const request = objectStore.get(key);
+            request.onerror = (event) => {
+                const err = event.target.error;
+                if (!!onError) {
+                    onError(err);
+                }
+                else {
+                    reject(err);
+                }
+            };
+            request.onsuccess = (event) => {
+                resolve(event.target.result);
+            };
+        }));
+    }
+    selectAll(store, onError) {
+        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+            const objectStore = this.activeDatabase.transaction(store).objectStore(store);
+            const request = objectStore.getAll();
+            request.onerror = (event) => {
+                const err = event.target.error;
+                if (!!onError) {
+                    onError(err);
+                }
+                else {
+                    reject(err);
+                }
+            };
+            request.onsuccess = (event) => {
+                resolve(event.target.result);
+            };
+        }));
+    }
+    query(store, onError) {
+        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+            const objectStore = this.activeDatabase.transaction(store).objectStore(store);
+            const request = objectStore.openCursor();
+            request.onerror = (event) => {
+                const err = event.target.error;
+                if (!!onError) {
+                    onError(err);
+                }
+                else {
+                    reject(err);
+                }
+            };
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                const result = new Array();
+                if (cursor) {
+                    result.push(cursor.value);
+                    cursor.continue();
+                }
+                else {
+                    resolve(result);
+                }
+            };
+        }));
+    }
+    delete(key, store, onError) {
+        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+            const objectStore = this.activeDatabase.transaction(store, "readwrite").objectStore(store);
+            const request = objectStore.delete(key);
+            request.onerror = (event) => {
+                const err = event.target.error;
+                if (!!onError) {
+                    onError(err);
+                }
+                else {
+                    reject(err);
+                }
+            };
+            request.onsuccess = (event) => {
+                resolve();
+            };
+        }));
+    }
+    deleteAll(store, onError) {
+        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+            const objectStore = this.activeDatabase.transaction(store, "readwrite").objectStore(store);
+            const request = objectStore.clear();
+            request.onerror = (event) => {
+                const err = event.target.error;
+                if (!!onError) {
+                    onError(err);
+                }
+                else {
+                    reject(err);
+                }
+            };
+            request.onsuccess = (event) => {
+                resolve();
+            };
+        }));
+    }
+    open() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.activeDatabaseName, this.activeDatabaseVersion);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (event.oldVersion === 0) {
+                    this.onCreate(db);
+                }
+                else if (!!!event.newVersion) {
+                    this.onDelete(db);
+                }
+                else if (event.newVersion > event.oldVersion) {
+                    this.onUpgrade(db, event.oldVersion, event.newVersion);
+                }
+            };
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                this.onOpen(db);
+                this.#dbInstance = db;
+                resolve(db);
+            };
+            request.onerror = (event) => {
+                this.onError(event.target.error);
+                reject();
+            };
+        });
+    }
+    /**
+     * close
+     */
+    close() {
+        if (!!this.activeDatabase) {
+            this.activeDatabase.close();
+            this.#dbInstance = undefined;
+        }
+    }
+    get activeDatabaseName() {
+        return this.#dbName;
+    }
+    get activeDatabase() {
+        return this.#dbInstance;
+    }
+    get activeDatabaseVersion() {
+        return this.#dbVersion;
+    }
+}
+class MusicDBHelper extends IndexdDBHelper {
+    onCreate(db) {
+        const objectStore = db.createObjectStore("musics", { keyPath: "index" });
+        objectStore.createIndex("album", "album", { unique: false });
+        objectStore.createIndex("id", "index", { unique: true });
+    }
+    onError(err) {
+        super.onError(err);
+        alert(err);
+    }
+    clearIndex() {
+        return this.deleteAll("musics");
+    }
+    updateMusicIndex(data) {
+        return super.update(data, "musics");
+    }
+    getMusic(id) {
+        return super.select(id, "musics");
+    }
+    getAllMusics() {
+        return super.selectAll("musics");
     }
 }
 let musicPlayer;
