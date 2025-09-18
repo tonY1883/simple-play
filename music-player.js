@@ -144,7 +144,7 @@ class MusicPlayer {
     displayTrackList(filter = "") {
         this.#trackListDisplay.innerHTML = "";
         if (this.#trackList) {
-            let newContent = "";
+            let trackList = document.createDocumentFragment();
             //find exact match first, then append word match.
             let result = this.#trackList
                 .filter((t) => t.name.toLowerCase().includes(filter.trim().toLowerCase()))
@@ -159,9 +159,22 @@ class MusicPlayer {
                 !!!result.find((rt) => rt.index === t.index))
                 .sort(MusicPlayer.trackSorter))
                 .forEach((track) => {
-                newContent += `<div class="track-list-item" onclick="musicPlayer.setTrack(${track.index})"><span class="album-name">${track.album ? track.album + " / " : ""}</span> ${track.name}</div>`;
+                const trackItem = document.createElement("div");
+                trackItem.classList.add("track-list-item");
+                trackItem.onclick = (e) => {
+                    e.stopPropagation();
+                    musicPlayer.setTrack(track.index);
+                };
+                if (!!track.album) {
+                    const trackAlbum = document.createElement("span");
+                    trackAlbum.classList.add("album-name");
+                    trackAlbum.innerText = track.album + ' / ';
+                    trackItem.appendChild(trackAlbum);
+                }
+                trackItem.append(track.name);
+                trackList.appendChild(trackItem);
             });
-            this.#trackListDisplay.innerHTML = newContent;
+            this.#trackListDisplay.appendChild(trackList);
         }
     }
     setTrack(index) {
