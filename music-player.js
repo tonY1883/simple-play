@@ -1,4 +1,5 @@
 "use strict";
+var _a;
 class MusicPlayer {
     #dBHelper;
     #currentTrack;
@@ -34,14 +35,14 @@ class MusicPlayer {
         this.#volumeControl = document.querySelector("#volume-control");
         this.#trackSearchInput = document.querySelector("#track-search-input");
         //setup playback control
-        this.#playButton.addEventListener("click", () => this.playTrack());
-        this.#stopButton.addEventListener("click", () => this.stopTrack());
-        this.#pauseButton.addEventListener("click", () => this.pauseTrack());
+        this.#playButton.addEventListener("click", () => this.#playTrack());
+        this.#stopButton.addEventListener("click", () => this.#stopTrack());
+        this.#pauseButton.addEventListener("click", () => this.#pauseTrack());
         this.#loopButton.addEventListener("click", () => this.toggleLooping());
         this.#randomButton.addEventListener("click", () => this.toggleRandom());
         //setup volume setting
-        this.#volumeControl.step = (100 / MusicPlayer.VOLUME_CONTROL_STEPS / 100).toString();
-        const initialVolume = Number(localStorage.getItem(MusicPlayer.VOLUME_PERSISTENCE_KEY)) || Number(this.#volumeControl.value);
+        this.#volumeControl.step = (100 / _a.VOLUME_CONTROL_STEPS / 100).toString();
+        const initialVolume = Number(localStorage.getItem(_a.VOLUME_PERSISTENCE_KEY)) || Number(this.#volumeControl.value);
         this.setVolume(initialVolume); //initialize from stored value
         this.#volumeControl.value = this.#volumeControl.toString();
         this.#volumeControl.addEventListener("input", (e) => this.setVolume(Number(this.#volumeControl.value)));
@@ -51,7 +52,7 @@ class MusicPlayer {
             this.changeVolumeByStep(e.deltaY < 0);
         });
         //setup searching
-        this.#trackSearchInput.addEventListener("input", (e) => this.displayTrackList(this.#trackSearchInput.value));
+        this.#trackSearchInput.addEventListener("input", (e) => this.#displayTrackList(this.#trackSearchInput.value));
         //setup media
         this.#dBHelper = new MusicDBHelper("music_index");
         this.#currentTrack = new Audio();
@@ -59,14 +60,14 @@ class MusicPlayer {
             console.error("Cannot play selected track: ", this.#currentTrack.error);
             if (this.#isRandom) {
                 console.warn("Selected track cannot be played, moving on to next track");
-                this.randomSetTrack();
+                this.#randomSetTrack();
             }
             else {
                 alert("Error occurred while trying to play selected track");
             }
         };
         this.#currentTrack.ontimeupdate = () => {
-            this.#timeRemainDisplay.innerText = MusicPlayer.formatTime(this.getCurrentTrackRemainingTime()) ?? "";
+            this.#timeRemainDisplay.innerText = _a.formatTime(this.getCurrentTrackRemainingTime()) ?? "";
         };
         this.#currentTrack.onended = () => {
             if (this.#currentTrack.loop) {
@@ -75,12 +76,12 @@ class MusicPlayer {
             else if (this.#isRandom) {
                 // Only move to next track if loop is not enabled
                 console.info("Random enabled, picking next track");
-                this.randomSetTrack();
+                this.#randomSetTrack();
             }
         };
         //initialise display
-        this.updateLoopingDisplay();
-        this.updateRandomDisplay();
+        this.#updateLoopingDisplay();
+        this.#updateRandomDisplay();
     }
     static formatTime(duration) {
         if (isNaN(duration)) {
@@ -112,12 +113,12 @@ class MusicPlayer {
         console.info("Loading track list");
         this.#dBHelper
             .open()
-            .then(() => fetch("checksum.txt", { cache: "no-store" }))
+            .then(() => fetch("index-hash.txt", { cache: "no-store" }))
             .then((response) => response.text())
             .then((checksum) => {
             console.debug("current index signature: " + checksum);
-            const currentChecksum = localStorage.getItem(MusicPlayer.INDEX_HASH_KEY);
-            localStorage.setItem(MusicPlayer.INDEX_HASH_KEY, checksum);
+            const currentChecksum = localStorage.getItem(_a.INDEX_HASH_KEY);
+            localStorage.setItem(_a.INDEX_HASH_KEY, checksum);
             if (currentChecksum !== checksum) {
                 console.info("Index outdated or missing, downloading new index");
                 return this.#dBHelper
@@ -134,21 +135,21 @@ class MusicPlayer {
         })
             .then(() => this.#dBHelper.getAllMusics())
             .then((data) => (this.#trackList = data))
-            .then(() => this.displayTrackList())
+            .then(() => this.#displayTrackList())
             .catch((err) => {
             console.error(err);
             alert("error: " + err);
             this.loadTrackList();
         });
     }
-    displayTrackList(filter = "") {
+    #displayTrackList(filter = "") {
         this.#trackListDisplay.innerHTML = "";
         if (this.#trackList) {
             let trackList = document.createDocumentFragment();
             //find exact match first, then append word match.
             let result = this.#trackList
                 .filter((t) => t.name.toLowerCase().includes(filter.trim().toLowerCase()))
-                .sort(MusicPlayer.trackSorter);
+                .sort(_a.trackSorter);
             result
                 .concat(this.#trackList
                 .filter((t) => filter
@@ -157,13 +158,13 @@ class MusicPlayer {
                 .split(" ")
                 .every((kw) => t.name?.toLowerCase().includes(kw) || t.album?.toLowerCase().includes(kw)) &&
                 !!!result.find((rt) => rt.index === t.index))
-                .sort(MusicPlayer.trackSorter))
+                .sort(_a.trackSorter))
                 .forEach((track) => {
                 const trackItem = document.createElement("div");
                 trackItem.classList.add("track-list-item");
                 trackItem.onclick = (e) => {
                     e.stopPropagation();
-                    musicPlayer.setTrack(track.index);
+                    musicPlayer.#setTrack(track.index);
                 };
                 if (!!track.album) {
                     const trackAlbum = document.createElement("span");
@@ -177,7 +178,7 @@ class MusicPlayer {
             this.#trackListDisplay.appendChild(trackList);
         }
     }
-    setTrack(index) {
+    #setTrack(index) {
         let track = this.#trackList?.find((t) => t.index === index);
         if (!!track) {
             //unset the current track first
@@ -185,10 +186,10 @@ class MusicPlayer {
                 console.info("Current track not stooped, stopping");
                 this.#currentTrack.pause();
             }
-            this.loadTrack(track.src, () => {
-                this.playTrack();
+            this.#loadTrack(track.src, () => {
+                this.#playTrack();
                 this.#trackNameDisplay.innerText = track.name;
-                this.#timeRemainDisplay.innerText = MusicPlayer.formatTime(this.#currentTrack.duration);
+                this.#timeRemainDisplay.innerText = _a.formatTime(this.#currentTrack.duration);
                 this.#currentTrack.oncanplay = null; //unset the event
                 if ("mediaSession" in navigator) {
                     navigator.mediaSession.metadata = new MediaMetadata({
@@ -197,13 +198,13 @@ class MusicPlayer {
                         album: track.album,
                     });
                     navigator.mediaSession.setActionHandler("play", () => {
-                        this.playTrack();
+                        this.#playTrack();
                     });
                     navigator.mediaSession.setActionHandler("pause", () => {
-                        this.pauseTrack();
+                        this.#pauseTrack();
                     });
                     navigator.mediaSession.setActionHandler("stop", () => {
-                        this.stopTrack();
+                        this.#stopTrack();
                     });
                 }
             });
@@ -212,13 +213,13 @@ class MusicPlayer {
             console.warn(`Track ${index} not found in track list`);
         }
     }
-    loadTrack(path, onLoad) {
+    #loadTrack(path, onLoad) {
         console.info("Loading track: ", path);
         this.#currentTrack.src = path;
         this.#currentTrack.oncanplay = onLoad;
         this.#currentTrack.load();
     }
-    playTrack() {
+    #playTrack() {
         if (this.#currentTrack) {
             this.#currentTrack.volume = this.#volumeLevel;
             this.#currentTrack
@@ -238,7 +239,7 @@ class MusicPlayer {
             console.warn("Track not set, will not play");
         }
     }
-    stopTrack() {
+    #stopTrack() {
         if (this.#currentTrack) {
             this.#currentTrack.currentTime = 0;
             this.#currentTrack.pause();
@@ -248,7 +249,7 @@ class MusicPlayer {
             console.info("Stopped playback");
         }
     }
-    pauseTrack() {
+    #pauseTrack() {
         if (this.#currentTrack) {
             this.#currentTrack.pause();
             if (navigator.mediaSession) {
@@ -285,10 +286,10 @@ class MusicPlayer {
         if (this.#currentTrack) {
             this.#currentTrack.volume = this.#volumeLevel;
         }
-        localStorage.setItem(MusicPlayer.VOLUME_PERSISTENCE_KEY, value.toString());
+        localStorage.setItem(_a.VOLUME_PERSISTENCE_KEY, value.toString());
     }
     changeVolumeByStep(increase) {
-        let change = 100 / MusicPlayer.VOLUME_CONTROL_STEPS / 100;
+        let change = 100 / _a.VOLUME_CONTROL_STEPS / 100;
         if (!increase) {
             change = 0 - change;
         }
@@ -298,9 +299,9 @@ class MusicPlayer {
     toggleLooping() {
         this.#currentTrack.loop = !this.#currentTrack.loop;
         console.info("Looping enabled:", this.#currentTrack.loop);
-        this.updateLoopingDisplay();
+        this.#updateLoopingDisplay();
     }
-    updateLoopingDisplay() {
+    #updateLoopingDisplay() {
         if (this.#currentTrack?.loop) {
             this.#loopButton.style.opacity = "1";
         }
@@ -310,9 +311,9 @@ class MusicPlayer {
     }
     toggleRandom() {
         this.#isRandom = !this.#isRandom;
-        this.updateRandomDisplay();
+        this.#updateRandomDisplay();
     }
-    updateRandomDisplay() {
+    #updateRandomDisplay() {
         if (this.#isRandom) {
             this.#randomButton.style.opacity = "1";
         }
@@ -320,12 +321,13 @@ class MusicPlayer {
             this.#randomButton.style.opacity = "0.4";
         }
     }
-    randomSetTrack() {
+    #randomSetTrack() {
         if (!!this.#trackList) {
-            this.setTrack(this.#trackList[Math.floor(Math.random() * this.#trackList.length)].index);
+            this.#setTrack(this.#trackList[Math.floor(Math.random() * this.#trackList.length)].index);
         }
     }
 }
+_a = MusicPlayer;
 class IndexdDBHelper {
     #dbName;
     #dbVersion;
@@ -341,13 +343,13 @@ class IndexdDBHelper {
         throw err;
     }
     /** Throws error if database is not open */
-    async requiresOpenDatabase() {
+    async #requiresOpenDatabase() {
         if (!!!this.activeDatabase) {
             throw new Error("No open database for operation");
         }
     }
     insert(data, store) {
-        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+        return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
             const transaction = this.activeDatabase.transaction(store, "readwrite");
             const resultKeys = new Array();
             transaction.oncomplete = (event) => {
@@ -366,7 +368,7 @@ class IndexdDBHelper {
         }));
     }
     update(data, store) {
-        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+        return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
             const transaction = this.activeDatabase.transaction(store, "readwrite");
             const resultKeys = new Array();
             transaction.oncomplete = (event) => {
@@ -385,7 +387,7 @@ class IndexdDBHelper {
         }));
     }
     select(key, store, onError) {
-        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+        return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
             const objectStore = this.activeDatabase.transaction(store).objectStore(store);
             const request = objectStore.get(key);
             request.onerror = (event) => {
@@ -403,7 +405,7 @@ class IndexdDBHelper {
         }));
     }
     selectAll(store, onError) {
-        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+        return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
             const objectStore = this.activeDatabase.transaction(store).objectStore(store);
             const request = objectStore.getAll();
             request.onerror = (event) => {
@@ -421,7 +423,7 @@ class IndexdDBHelper {
         }));
     }
     query(store, onError) {
-        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+        return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
             const objectStore = this.activeDatabase.transaction(store).objectStore(store);
             const request = objectStore.openCursor();
             request.onerror = (event) => {
@@ -447,7 +449,7 @@ class IndexdDBHelper {
         }));
     }
     delete(key, store, onError) {
-        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+        return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
             const objectStore = this.activeDatabase.transaction(store, "readwrite").objectStore(store);
             const request = objectStore.delete(key);
             request.onerror = (event) => {
@@ -465,7 +467,7 @@ class IndexdDBHelper {
         }));
     }
     deleteAll(store, onError) {
-        return this.requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+        return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
             const objectStore = this.activeDatabase.transaction(store, "readwrite").objectStore(store);
             const request = objectStore.clear();
             request.onerror = (event) => {
