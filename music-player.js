@@ -1,5 +1,15 @@
 "use strict";
 var _a;
+function base64ToBlob(base64) {
+    //todo replace with Uint8Array.fromBase64()
+    const byteChars = atob(base64);
+    const byteNumbers = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) {
+        byteNumbers[i] = byteChars.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray]);
+}
 class MusicPlayer {
     #dBHelper;
     #currentTrack;
@@ -7,11 +17,13 @@ class MusicPlayer {
     #trackSearchInput;
     //basic ui pane
     #trackListDisplay;
+    #trackListItemAdapter;
     //control elements
     #playButton;
     #pauseButton;
     #stopButton;
     #trackNameDisplay;
+    #timeLapsedDisplay;
     #timeRemainDisplay;
     #loopButton;
     #randomButton;
@@ -20,42 +32,31 @@ class MusicPlayer {
     #isRandom = false;
     static VOLUME_CONTROL_STEPS = 255;
     static VOLUME_PERSISTENCE_KEY = "volume";
-    static INDEX_KEY = "index";
-    static INDEX_HASH_KEY = "index-hash";
+    #trackAlbumDisplay;
+    #albumPlaceholder = "Unknown Album";
+    #trackAlbumArtDisplay;
+    #albumArtPlaceholder;
+    #trackArtistDisplay;
+    #artistPlaceholder = "Unknown Artist";
+    #trackProgressDisplay;
+    #albumArts;
+    //web audio stuff
+    #audioContext;
+    #source;
+    #volumeAdjustor;
+    #lineOutNode;
     constructor() {
-        //get all HTML elements
-        this.#playButton = document.querySelector("#music-play-button");
-        this.#pauseButton = document.querySelector("#music-pause-button");
-        this.#stopButton = document.querySelector("#music-stop-button");
-        this.#loopButton = document.querySelector("#music-loop-button");
-        this.#randomButton = document.querySelector("#music-random-button");
-        this.#trackNameDisplay = document.querySelector("#player-name");
-        this.#timeRemainDisplay = document.querySelector("#player-remaining-time");
-        this.#trackListDisplay = document.querySelector("#track-list");
-        this.#volumeControl = document.querySelector("#volume-control");
-        this.#trackSearchInput = document.querySelector("#track-search-input");
-        //setup playback control
-        this.#playButton.addEventListener("click", () => this.#playTrack());
-        this.#stopButton.addEventListener("click", () => this.#stopTrack());
-        this.#pauseButton.addEventListener("click", () => this.#pauseTrack());
-        this.#loopButton.addEventListener("click", () => this.toggleLooping());
-        this.#randomButton.addEventListener("click", () => this.toggleRandom());
-        //setup volume setting
-        this.#volumeControl.step = (100 / _a.VOLUME_CONTROL_STEPS / 100).toString();
-        const initialVolume = Number(localStorage.getItem(_a.VOLUME_PERSISTENCE_KEY)) || Number(this.#volumeControl.value);
-        this.setVolume(initialVolume); //initialize from stored value
-        this.#volumeControl.value = this.#volumeControl.toString();
-        this.#volumeControl.addEventListener("input", (e) => this.setVolume(Number(this.#volumeControl.value)));
-        this.#volumeControl.addEventListener("wheel", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.changeVolumeByStep(e.deltaY < 0);
-        });
-        //setup searching
-        this.#trackSearchInput.addEventListener("input", (e) => this.#displayTrackList(this.#trackSearchInput.value));
         //setup media
         this.#dBHelper = new MusicDBHelper("music_index");
         this.#currentTrack = new Audio();
+        this.#audioContext = new AudioContext();
+        const hook = () => this.#audioContext.resume();
+        ["click", "keydown", "touchstart"].forEach((evt) => {
+            window.addEventListener(evt, hook, { once: true });
+        });
+        this.#source = this.#audioContext.createMediaElementSource(this.#currentTrack);
+        this.#lineOutNode = this.#audioContext.createMediaStreamDestination();
+        this.#source.connect(this.#lineOutNode);
         this.#currentTrack.onerror = () => {
             console.error("Cannot play selected track: ", this.#currentTrack.error);
             if (this.#isRandom) {
@@ -67,7 +68,15 @@ class MusicPlayer {
             }
         };
         this.#currentTrack.ontimeupdate = () => {
-            this.#timeRemainDisplay.innerText = _a.formatTime(this.getCurrentTrackRemainingTime()) ?? "";
+            if (!!this.#timeLapsedDisplay) {
+                this.#timeLapsedDisplay.innerText = _a.formatTime(this.currentTrackElapsedTime);
+            }
+            if (!!this.#timeRemainDisplay) {
+                this.#timeRemainDisplay.innerText = _a.formatTime(this.currentTrackRemainingTime) ?? "";
+            }
+            if (!!this.#trackProgressDisplay) {
+                this.#trackProgressDisplay.value = this.currentTrackElapsedTime;
+            }
         };
         this.#currentTrack.onended = () => {
             if (this.#currentTrack.loop) {
@@ -79,9 +88,13 @@ class MusicPlayer {
                 this.#randomSetTrack();
             }
         };
-        //initialise display
-        this.#updateLoopingDisplay();
-        this.#updateRandomDisplay();
+        //setup volume setting
+        //volume processing
+        this.#volumeAdjustor = new GainNode(this.#audioContext);
+        this.#source.connect(this.#volumeAdjustor).connect(this.#audioContext.destination);
+        const initialVolume = Number(localStorage.getItem(_a.VOLUME_PERSISTENCE_KEY)) || 0.5; //initialize from stored value
+        this.setVolume(initialVolume);
+        this.#albumArts = new Map();
     }
     static formatTime(duration) {
         if (isNaN(duration)) {
@@ -109,30 +122,110 @@ class MusicPlayer {
             return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
         }
     }
+    static colorToRGB(colorHex) {
+        const r = parseInt(colorHex.substring(1, 3), 16);
+        const g = parseInt(colorHex.substring(3, 5), 16);
+        const b = parseInt(colorHex.substring(5), 16);
+        return { r, g, b };
+    }
+    setPlayButton(ele) {
+        this.#playButton = ele;
+        this.#playButton?.addEventListener("click", () => this.#playTrack());
+    }
+    setPauseButton(ele) {
+        this.#pauseButton = ele;
+        this.#pauseButton?.addEventListener("click", () => this.#pauseTrack());
+    }
+    setStopButton(ele) {
+        this.#stopButton = ele;
+        this.#stopButton?.addEventListener("click", () => this.#stopTrack());
+    }
+    setLoopButton(ele) {
+        this.#loopButton = ele;
+        this.#loopButton.addEventListener("click", () => this.toggleLooping());
+        this.#updateLoopingDisplay();
+    }
+    setRandomButton(ele) {
+        this.#randomButton = ele;
+        this.#randomButton.addEventListener("click", () => this.toggleRandom());
+        this.#updateRandomDisplay();
+    }
+    setSearchInput(ele) {
+        this.#trackSearchInput = ele;
+        this.#trackSearchInput?.addEventListener("input", (e) => this.#displayTrackList(this.#trackSearchInput.value));
+    }
+    setVolumeControl(ele) {
+        if (ele.type !== "range") {
+            console.warn(`Unexpected type for volume control input: expected 'range' but got ${ele.type}. Control may not function properly.`);
+        }
+        this.#volumeControl = ele;
+        this.#volumeControl.step = (100 / _a.VOLUME_CONTROL_STEPS / 100).toString();
+        this.#volumeControl.value = this.#volumeControl.toString();
+        this.#volumeControl.addEventListener("input", (e) => this.setVolume(Number(this.#volumeControl.value)));
+        this.#volumeControl.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.changeVolumeByStep(e.deltaY < 0);
+        });
+    }
+    setTrackListItemDisplay(rootEle, itemAdapter) {
+        this.#trackListDisplay = rootEle;
+        this.#trackListItemAdapter = itemAdapter;
+    }
+    setTrackNameDisplay(ele) {
+        this.#trackNameDisplay = ele;
+    }
+    setTrackTimeLapsedDisplay(ele) {
+        this.#timeLapsedDisplay = ele;
+    }
+    setTrackTimeRemainDisplay(ele) {
+        this.#timeRemainDisplay = ele;
+    }
+    setTrackAlbumDisplay(ele, placeholder) {
+        this.#trackAlbumDisplay = ele;
+        if (!!placeholder) {
+            this.#albumPlaceholder = placeholder;
+        }
+    }
+    setTrackArtistDisplay(ele, placeholder) {
+        this.#trackArtistDisplay = ele;
+        if (!!placeholder) {
+            this.#artistPlaceholder = placeholder;
+        }
+    }
+    setTrackAlbumArtDisplay(ele, placeholder) {
+        this.#trackAlbumArtDisplay = ele;
+        if (!!placeholder) {
+            this.#albumArtPlaceholder = placeholder;
+        }
+    }
+    setTrackProgressDisplay(ele) {
+        this.#trackProgressDisplay = ele;
+    }
     loadTrackList() {
         console.info("Loading track list");
         this.#dBHelper
             .open()
-            .then(() => fetch("index-hash.txt", { cache: "no-store" }))
-            .then((response) => response.text())
-            .then((checksum) => {
-            console.debug("current index signature: " + checksum);
-            const currentChecksum = localStorage.getItem(_a.INDEX_HASH_KEY);
-            localStorage.setItem(_a.INDEX_HASH_KEY, checksum);
-            if (currentChecksum !== checksum) {
+            .then(() => Promise.all([
+            fetch(".simple_play_data/index-hash.txt", { cache: "no-store" }).then((response) => response.text()),
+            this.#dBHelper.getMusicIndexHash(),
+        ]).then(([server, client]) => {
+            console.debug("current index signature: " + server);
+            if (client !== server) {
                 console.info("Index outdated or missing, downloading new index");
                 return this.#dBHelper
                     .clearIndex()
-                    .then(() => fetch("index.json", { cache: "no-store" }))
+                    .then(() => fetch(".simple_play_data/index.json", { cache: "no-store" })
                     .then((response) => response.json())
                     .then(async (tracks) => {
-                    await this.#dBHelper.updateMusicIndex(tracks);
-                });
+                    await this.#dBHelper.updateMusicIndex(tracks, server);
+                }))
+                    .then(() => Promise.resolve());
             }
             else {
                 return Promise.resolve();
             }
-        })
+        }))
             .then(() => this.#dBHelper.getAllMusics())
             .then((data) => (this.#trackList = data))
             .then(() => this.#displayTrackList())
@@ -143,8 +236,8 @@ class MusicPlayer {
         });
     }
     #displayTrackList(filter = "") {
-        this.#trackListDisplay.innerHTML = "";
-        if (this.#trackList) {
+        if (!!this.#trackList && !!this.#trackListDisplay) {
+            this.#trackListDisplay.innerHTML = "";
             let trackList = document.createDocumentFragment();
             //find exact match first, then append word match.
             let result = this.#trackList
@@ -160,20 +253,12 @@ class MusicPlayer {
                 !!!result.find((rt) => rt.index === t.index))
                 .sort(_a.trackSorter))
                 .forEach((track) => {
-                const trackItem = document.createElement("div");
-                trackItem.classList.add("track-list-item");
-                trackItem.onclick = (e) => {
+                const item = this.#trackListItemAdapter(track);
+                item.onclick = (e) => {
                     e.stopPropagation();
-                    musicPlayer.#setTrack(track.index);
+                    this.#setTrack(track.index);
                 };
-                if (!!track.album) {
-                    const trackAlbum = document.createElement("span");
-                    trackAlbum.classList.add("album-name");
-                    trackAlbum.innerText = track.album + ' / ';
-                    trackItem.appendChild(trackAlbum);
-                }
-                trackItem.append(track.name);
-                trackList.appendChild(trackItem);
+                trackList.appendChild(item);
             });
             this.#trackListDisplay.appendChild(trackList);
         }
@@ -187,26 +272,57 @@ class MusicPlayer {
                 this.#currentTrack.pause();
             }
             this.#loadTrack(track.src, () => {
-                this.#playTrack();
-                this.#trackNameDisplay.innerText = track.name;
-                this.#timeRemainDisplay.innerText = _a.formatTime(this.#currentTrack.duration);
+                if (!!this.#trackNameDisplay) {
+                    this.#trackNameDisplay.innerText = track.name;
+                }
+                if (this.#trackAlbumDisplay) {
+                    this.#trackAlbumDisplay.innerText = track.album || this.#albumPlaceholder;
+                }
+                if (!!this.#trackArtistDisplay) {
+                    this.#trackArtistDisplay.innerText = track.artist || this.#artistPlaceholder;
+                }
+                if (!!this.#trackProgressDisplay) {
+                    this.#trackProgressDisplay.max = this.currentTrackDuration;
+                    this.#trackProgressDisplay.value = 0;
+                }
+                if (!!this.#timeLapsedDisplay) {
+                    this.#timeLapsedDisplay.innerText = _a.formatTime(0);
+                }
+                if (!!this.#timeRemainDisplay) {
+                    this.#timeRemainDisplay.innerText = _a.formatTime(this.#currentTrack.duration);
+                }
                 this.#currentTrack.oncanplay = null; //unset the event
-                if ("mediaSession" in navigator) {
-                    navigator.mediaSession.metadata = new MediaMetadata({
+                this.#loadTrackCoverArt(track).then(() => {
+                    const meta = {
                         title: track.name,
                         artist: track.artist,
                         album: track.album,
-                    });
-                    navigator.mediaSession.setActionHandler("play", () => {
-                        this.#playTrack();
-                    });
-                    navigator.mediaSession.setActionHandler("pause", () => {
-                        this.#pauseTrack();
-                    });
-                    navigator.mediaSession.setActionHandler("stop", () => {
-                        this.#stopTrack();
-                    });
-                }
+                    };
+                    if (!!track.cover && this.#albumArts.has(track.cover)) {
+                        const img = document.createElement("img");
+                        img.src = this.#albumArts.get(track.cover);
+                        if (!!this.#trackAlbumArtDisplay) {
+                            this.#trackAlbumArtDisplay.appendChild(img);
+                        }
+                        meta.artwork = [{ src: img.src }];
+                    }
+                    else if (this.#trackAlbumArtDisplay && this.#albumArtPlaceholder) {
+                        this.#trackAlbumArtDisplay.appendChild(this.#albumArtPlaceholder);
+                    }
+                    if ("mediaSession" in navigator) {
+                        navigator.mediaSession.metadata = new MediaMetadata(meta);
+                        navigator.mediaSession.setActionHandler("play", () => {
+                            this.#playTrack();
+                        });
+                        navigator.mediaSession.setActionHandler("pause", () => {
+                            this.#pauseTrack();
+                        });
+                        navigator.mediaSession.setActionHandler("stop", () => {
+                            this.#stopTrack();
+                        });
+                    }
+                });
+                this.#playTrack();
             });
         }
         else {
@@ -219,9 +335,34 @@ class MusicPlayer {
         this.#currentTrack.oncanplay = onLoad;
         this.#currentTrack.load();
     }
+    async #loadTrackCoverArt(track) {
+        console.info("Loading cover art for track " + track.index);
+        if (this.#trackAlbumArtDisplay) {
+            this.#trackAlbumArtDisplay.innerHTML = "";
+        }
+        if (!(!!track.cover && this.#albumArts.has(track.cover))) {
+            if (!!track.cover) {
+                let image = await this.#dBHelper.getCoverArt(track.cover);
+                if (image === undefined) {
+                    try {
+                        const response = await fetch(`.simple_play_data/${track.cover}.txt`, { cache: "no-store" });
+                        const coverData = await response.text();
+                        await this.#dBHelper.updateCoverArtIndex([{ id: track.cover, data: base64ToBlob(coverData) }]);
+                        image = await this.#dBHelper.getCoverArt(track.cover);
+                    }
+                    catch (err) {
+                        console.warn(new Error(`Failed to load cover art ${track.cover}`, { cause: err }));
+                        image = undefined;
+                    }
+                }
+                if (image) {
+                    this.#albumArts.set(track.cover, URL.createObjectURL(image.data));
+                }
+            }
+        }
+    }
     #playTrack() {
         if (this.#currentTrack) {
-            this.#currentTrack.volume = this.#volumeLevel;
             this.#currentTrack
                 .play()
                 .then(() => {
@@ -258,34 +399,32 @@ class MusicPlayer {
             console.info("Paused playback");
         }
     }
-    getAudioTrack() {
-        return this.#currentTrack;
-    }
-    getCurrentTrackDuration() {
+    get currentTrackDuration() {
         if (this.#currentTrack?.duration) {
             return this.#currentTrack.duration;
         }
         return null;
     }
-    getCurrentTrackPlaybackTime() {
+    get currentTrackElapsedTime() {
         if (this.#currentTrack?.duration) {
             return this.#currentTrack.currentTime;
         }
         return null;
     }
-    getCurrentTrackRemainingTime() {
-        if (!!this.getCurrentTrackPlaybackTime() && !!this.getCurrentTrackDuration()) {
-            return this.getCurrentTrackDuration() - this.getCurrentTrackPlaybackTime();
+    get currentTrackRemainingTime() {
+        if (!!this.currentTrackElapsedTime && !!this.currentTrackDuration) {
+            return this.currentTrackDuration - this.currentTrackElapsedTime;
         }
         return null;
+    }
+    get playbackVolume() {
+        return this.#volumeLevel;
     }
     setVolume(value) {
         value = Math.max(0, Math.min(1, value)); //clamp value to valid range
         console.info(`Setting volume to ${value}x`);
         this.#volumeLevel = value;
-        if (this.#currentTrack) {
-            this.#currentTrack.volume = this.#volumeLevel;
-        }
+        this.#volumeAdjustor.gain.value = this.#volumeLevel;
         localStorage.setItem(_a.VOLUME_PERSISTENCE_KEY, value.toString());
     }
     changeVolumeByStep(increase) {
@@ -294,7 +433,9 @@ class MusicPlayer {
             change = 0 - change;
         }
         this.setVolume(this.#volumeLevel + change);
-        this.#volumeControl.value = this.#volumeLevel.toString();
+        if (!!this.#volumeControl) {
+            this.#volumeControl.value = this.#volumeLevel.toString();
+        }
     }
     toggleLooping() {
         this.#currentTrack.loop = !this.#currentTrack.loop;
@@ -302,11 +443,13 @@ class MusicPlayer {
         this.#updateLoopingDisplay();
     }
     #updateLoopingDisplay() {
-        if (this.#currentTrack?.loop) {
-            this.#loopButton.style.opacity = "1";
-        }
-        else {
-            this.#loopButton.style.opacity = "0.4";
+        if (!!this.#loopButton) {
+            if (this.#currentTrack?.loop) {
+                this.#loopButton.style.opacity = "1";
+            }
+            else {
+                this.#loopButton.style.opacity = "0.4";
+            }
         }
     }
     toggleRandom() {
@@ -314,17 +457,30 @@ class MusicPlayer {
         this.#updateRandomDisplay();
     }
     #updateRandomDisplay() {
-        if (this.#isRandom) {
-            this.#randomButton.style.opacity = "1";
-        }
-        else {
-            this.#randomButton.style.opacity = "0.4";
+        if (!!this.#randomButton) {
+            if (this.#isRandom) {
+                this.#randomButton.style.opacity = "1";
+            }
+            else {
+                this.#randomButton.style.opacity = "0.4";
+            }
         }
     }
     #randomSetTrack() {
         if (!!this.#trackList) {
             this.#setTrack(this.#trackList[Math.floor(Math.random() * this.#trackList.length)].index);
         }
+    }
+    toggleSystemOut(status) {
+        if (!status) {
+            this.#source.disconnect(this.#volumeAdjustor);
+        }
+        else {
+            this.#source.connect(this.#volumeAdjustor);
+        }
+    }
+    get lineOut() {
+        return this.#lineOutNode;
     }
 }
 _a = MusicPlayer;
@@ -348,7 +504,10 @@ class IndexdDBHelper {
             throw new Error("No open database for operation");
         }
     }
-    insert(data, store) {
+    insert(data, store, keys) {
+        if (!!keys && keys.length !== data.length) {
+            throw new Error("number of provided keys does not match number of data");
+        }
         return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
             const transaction = this.activeDatabase.transaction(store, "readwrite");
             const resultKeys = new Array();
@@ -359,15 +518,24 @@ class IndexdDBHelper {
                 reject(event.target.error);
             };
             const objectStore = transaction.objectStore(store);
-            data.forEach((datum) => {
-                const request = objectStore.add(datum);
+            data.forEach((datum, index) => {
+                let request;
+                if (!!keys) {
+                    request = objectStore.add(datum, keys.at(index));
+                }
+                else {
+                    request = objectStore.add(datum);
+                }
                 request.onsuccess = (event) => {
                     resultKeys.push(event.target.result);
                 };
             });
         }));
     }
-    update(data, store) {
+    update(data, store, keys) {
+        if (!!keys && keys.length !== data.length) {
+            throw new Error("number of provided keys does not match number of data");
+        }
         return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
             const transaction = this.activeDatabase.transaction(store, "readwrite");
             const resultKeys = new Array();
@@ -378,8 +546,14 @@ class IndexdDBHelper {
                 reject(event.target.error);
             };
             const objectStore = transaction.objectStore(store);
-            data.forEach((datum) => {
-                const request = objectStore.put(datum);
+            data.forEach((datum, index) => {
+                let request;
+                if (!!keys) {
+                    request = objectStore.put(datum, keys.at(index));
+                }
+                else {
+                    request = objectStore.put(datum);
+                }
                 request.onsuccess = (event) => {
                     resultKeys.push(event.target.result);
                 };
@@ -426,18 +600,16 @@ class IndexdDBHelper {
         return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
             const objectStore = this.activeDatabase.transaction(store).objectStore(store);
             const request = objectStore.openCursor();
+            const result = new Array();
             request.onerror = (event) => {
                 const err = event.target.error;
                 if (!!onError) {
                     onError(err);
                 }
-                else {
-                    reject(err);
-                }
+                reject(err);
             };
             request.onsuccess = (event) => {
                 const cursor = event.target.result;
-                const result = new Array();
                 if (cursor) {
                     result.push(cursor.value);
                     cursor.continue();
@@ -481,6 +653,33 @@ class IndexdDBHelper {
             };
             request.onsuccess = (event) => {
                 resolve();
+            };
+        }));
+    }
+    queryIndex(store, indexName, onError) {
+        return this.#requiresOpenDatabase().then(() => new Promise((resolve, reject) => {
+            const objectStore = this.activeDatabase.transaction(store).objectStore(store);
+            const index = objectStore.index(indexName);
+            const request = index.openKeyCursor();
+            const result = new Array();
+            request.onerror = (event) => {
+                const err = event.target.error;
+                if (!!onError) {
+                    onError(err);
+                }
+                else {
+                    reject(err);
+                }
+            };
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    result.push(cursor.key);
+                    cursor.continue();
+                }
+                else {
+                    resolve(result);
+                }
             };
         }));
     }
@@ -531,30 +730,46 @@ class IndexdDBHelper {
     }
 }
 class MusicDBHelper extends IndexdDBHelper {
+    static TRACKS_STORE_NAME = "tracks";
+    static COVER_STORE_NAME = "cover";
+    static INDEX_HASH_KEY = "index-hash";
     onCreate(db) {
-        const objectStore = db.createObjectStore("musics", { keyPath: "index" });
-        objectStore.createIndex("album", "album", { unique: false });
-        objectStore.createIndex("id", "index", { unique: true });
+        db.createObjectStore(MusicDBHelper.INDEX_HASH_KEY);
+        const trackStore = db.createObjectStore(MusicDBHelper.TRACKS_STORE_NAME, { keyPath: "index" });
+        trackStore.createIndex("album", "album", { unique: false });
+        trackStore.createIndex("artist", "artist", { unique: false });
+        db.createObjectStore(MusicDBHelper.COVER_STORE_NAME, { keyPath: "id" });
     }
     onError(err) {
         super.onError(err);
         alert(err);
     }
     clearIndex() {
-        return this.deleteAll("musics");
+        return Promise.all([
+            this.deleteAll(MusicDBHelper.TRACKS_STORE_NAME),
+            this.deleteAll(MusicDBHelper.COVER_STORE_NAME),
+            this.deleteAll(MusicDBHelper.INDEX_HASH_KEY),
+        ]).then();
     }
-    updateMusicIndex(data) {
-        return super.update(data, "musics");
+    updateMusicIndex(data, hash) {
+        return super
+            .update(data, MusicDBHelper.TRACKS_STORE_NAME)
+            .then(() => super.update([hash], MusicDBHelper.INDEX_HASH_KEY, [MusicDBHelper.INDEX_HASH_KEY]))
+            .then();
+    }
+    getMusicIndexHash() {
+        return super.selectAll(MusicDBHelper.INDEX_HASH_KEY).then((v) => v.at(0) || null);
     }
     getMusic(id) {
-        return super.select(id, "musics");
+        return super.select(id, MusicDBHelper.TRACKS_STORE_NAME);
+    }
+    updateCoverArtIndex(data) {
+        return super.update(data, MusicDBHelper.COVER_STORE_NAME);
+    }
+    getCoverArt(id) {
+        return super.select(id, MusicDBHelper.COVER_STORE_NAME);
     }
     getAllMusics() {
-        return super.selectAll("musics");
+        return super.selectAll(MusicDBHelper.TRACKS_STORE_NAME);
     }
 }
-let musicPlayer;
-window.addEventListener("load", () => {
-    musicPlayer = new MusicPlayer();
-    musicPlayer.loadTrackList();
-});
