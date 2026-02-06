@@ -195,7 +195,7 @@ footer {
 	width: 100%;
 }
 
-#player-progress {
+#player-progress, #player-seekbar {
 	width: 100%;
 }
 

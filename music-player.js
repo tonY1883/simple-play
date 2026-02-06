@@ -39,6 +39,8 @@ class MusicPlayer {
     #trackArtistDisplay;
     #artistPlaceholder = "Unknown Artist";
     #trackProgressDisplay;
+    #trackSeekbar;
+    #seeking = false;
     #albumArts;
     //web audio stuff
     #audioContext;
@@ -76,6 +78,9 @@ class MusicPlayer {
             }
             if (!!this.#trackProgressDisplay) {
                 this.#trackProgressDisplay.value = this.currentTrackElapsedTime;
+            }
+            if (!!this.#trackSeekbar && !this.#seeking) {
+                this.#trackSeekbar.value = this.currentTrackElapsedTime.toString();
             }
         };
         this.#currentTrack.onended = () => {
@@ -202,6 +207,17 @@ class MusicPlayer {
     setTrackProgressDisplay(ele) {
         this.#trackProgressDisplay = ele;
     }
+    setTrackSeekBar(ele) {
+        if (ele.type !== "range") {
+            console.warn(`Unexpected type for seek control input: expected 'range' but got ${ele.type}. Control may not function properly.`);
+        }
+        this.#trackSeekbar = ele;
+        this.#trackSeekbar.addEventListener("input", (e) => (this.#currentTrack.currentTime = Number(this.#trackSeekbar.value)));
+        this.#trackSeekbar.addEventListener("mousedown", (e) => (this.#seeking = true));
+        this.#trackSeekbar.addEventListener("mouseup", (e) => (this.#seeking = false));
+        this.#trackSeekbar.addEventListener("touchstart", (e) => (this.#seeking = true));
+        this.#trackSeekbar.addEventListener("touchend", (e) => (this.#seeking = false));
+    }
     loadTrackList() {
         console.info("Loading track list");
         this.#dBHelper
@@ -284,6 +300,10 @@ class MusicPlayer {
                 if (!!this.#trackProgressDisplay) {
                     this.#trackProgressDisplay.max = this.currentTrackDuration;
                     this.#trackProgressDisplay.value = 0;
+                }
+                if (!!this.#trackSeekbar) {
+                    this.#trackSeekbar.max = this.currentTrackDuration.toString();
+                    this.#trackSeekbar.value = "0";
                 }
                 if (!!this.#timeLapsedDisplay) {
                     this.#timeLapsedDisplay.innerText = _a.formatTime(0);

@@ -23,7 +23,8 @@
 					<div id="player-artist">&nbsp;</div>
 					<div id="player-album">&nbsp;</div>
 					<div id="player-progress-panel">
-						<progress id="player-progress"></progress>
+						<!-- <progress id="player-progress"></progress> -->
+						<input type="range" id="player-seekbar"/>
 						<div id="time-display">
 							<div id="player-lapsed-time">&nbsp;</div>
 							<div id="player-remaining-time">&nbsp;</div>
@@ -92,6 +93,7 @@
 			musicPlayer.setTrackAlbumDisplay(document.querySelector("#player-album"));
 			musicPlayer.setTrackArtistDisplay(document.querySelector("#player-artist"));
 			musicPlayer.setTrackProgressDisplay(document.querySelector("#player-progress"));
+			musicPlayer.setTrackSeekBar(document.querySelector("#player-seekbar"));
 			musicPlayer.loadTrackList();
 		});
 	</script>
