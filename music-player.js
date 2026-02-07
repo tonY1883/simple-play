@@ -340,6 +340,9 @@ class MusicPlayer {
                         navigator.mediaSession.setActionHandler("stop", () => {
                             this.#stopTrack();
                         });
+                        navigator.mediaSession.setActionHandler("seekto", (args) => {
+                            this.#currentTrack.currentTime = args.seekTime;
+                        });
                     }
                 });
                 this.#playTrack();
