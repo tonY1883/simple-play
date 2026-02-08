@@ -30,7 +30,7 @@ class MusicPlayer {
     #volumeControl;
     #volumeLevel = 1;
     #isRandom = false;
-    static VOLUME_CONTROL_STEPS = 255;
+    #volumeControlSteps = 255;
     static VOLUME_PERSISTENCE_KEY = "volume";
     #trackAlbumDisplay;
     #albumPlaceholder = "Unknown Album";
@@ -213,8 +213,8 @@ class MusicPlayer {
             console.warn(`Unexpected type for volume control input: expected 'range' but got ${ele.type}. Control may not function properly.`);
         }
         this.#volumeControl = ele;
-        this.#volumeControl.step = (100 / _a.VOLUME_CONTROL_STEPS / 100).toString();
-        this.#volumeControl.value = this.#volumeControl.toString();
+        this.#volumeControl.step = (100 / this.#volumeControlSteps / 100).toString();
+        this.#volumeControl.value = this.#volumeLevel.toString();
         this.#volumeControl.addEventListener("input", (e) => this.setVolume(Number(this.#volumeControl.value)));
         this.#volumeControl.addEventListener("wheel", (e) => {
             e.preventDefault();
@@ -586,13 +586,19 @@ class MusicPlayer {
         return null;
     }
     /**
-     * Gets the current playback volume level ranging from 0 - 1;
+     * Get the current playback volume ranging from 0 - 1;
      */
     get playbackVolume() {
         return this.#volumeLevel;
     }
     /**
-     * Sets the playback volume level. Value level ranges from 0 - 1 (inclusive).
+     * Get the current playback volume level in terms of {@linkcode volumeControlSteps}.
+     */
+    get playbackVolumeLevel() {
+        return Math.floor(this.#volumeLevel / (1 / this.#volumeControlSteps));
+    }
+    /**
+     * Set the playback volume level. Value level ranges from 0 - 1 (inclusive).
      */
     setVolume(value) {
         value = Math.max(0, Math.min(1, value)); //clamp value to valid range
@@ -601,8 +607,28 @@ class MusicPlayer {
         this.#volumeAdjustor.gain.value = this.#volumeLevel;
         localStorage.setItem(_a.VOLUME_PERSISTENCE_KEY, value.toString());
     }
+    set volumeControlSteps(totalSteps) {
+        if (totalSteps <= 1) {
+            console.error(`invalid volume steps configuration ${totalSteps}, ignoring`);
+            return;
+        }
+        this.#volumeControlSteps = totalSteps;
+        if (!!this.#volumeControl) {
+            this.#volumeControl.step = (100 / this.#volumeControlSteps / 100).toString();
+        }
+    }
+    /**
+     * Total amount of volume levels avilable.
+     */
+    get volumeControlSteps() {
+        return this.#volumeControlSteps;
+    }
+    /**
+     * Increment/decrement volume level by step.
+     * @param increase boolean, pass in `true` to increase volume by 1 step, otherwise to decrease by 1 step.
+     */
     changeVolumeByStep(increase) {
-        let change = 100 / _a.VOLUME_CONTROL_STEPS / 100;
+        let change = 100 / this.#volumeControlSteps / 100;
         if (!increase) {
             change = 0 - change;
         }
@@ -669,6 +695,13 @@ class MusicPlayer {
             this.#source.connect(this.#volumeAdjustor);
         }
     }
+    /**
+     * Web Audio compatible output to allow custom audio processing.
+     *
+     * This output is not affected by volume control.
+     *
+     * @return A `MediaStreamAudioDestinationNode`
+     */
     get lineOut() {
         return this.#lineOutNode;
     }
