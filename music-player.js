@@ -47,6 +47,19 @@ class MusicPlayer {
     #source;
     #volumeAdjustor;
     #lineOutNode;
+    //trigger hooks
+    /** Callback triggers after the track list is loaded from server */
+    ontracksloaded;
+    /** Callback triggers after the individual track is selected */
+    ontrackset;
+    /** Callback triggers on track play/resume */
+    onplay;
+    /** Callback triggers when current track is completed */
+    onplayend;
+    /** Callback triggers on track stop */
+    onstop;
+    /** Callback triggers on track pause */
+    onpause;
     constructor() {
         //setup media
         this.#dBHelper = new MusicDBHelper("music_index");
@@ -81,6 +94,9 @@ class MusicPlayer {
             }
             if (!!this.#trackSeekbar && !this.#seeking) {
                 this.#trackSeekbar.value = this.currentTrackElapsedTime.toString();
+            }
+            if (!!this.onplayend && !this.#seeking && this.currentTrackRemainingTime === 0) {
+                this.onplayend();
             }
         };
         this.#currentTrack.onended = () => {
@@ -140,7 +156,7 @@ class MusicPlayer {
      */
     setPlayButton(ele) {
         this.#playButton = ele;
-        this.#playButton?.addEventListener("click", () => this.#playTrack());
+        this.#playButton?.addEventListener("click", () => this.play());
     }
     /**
      * Configure ui element for playback controls.
@@ -149,7 +165,7 @@ class MusicPlayer {
      */
     setPauseButton(ele) {
         this.#pauseButton = ele;
-        this.#pauseButton?.addEventListener("click", () => this.#pauseTrack());
+        this.#pauseButton?.addEventListener("click", () => this.pause());
     }
     /**
      * Configure ui element for playback controls.
@@ -158,7 +174,7 @@ class MusicPlayer {
      */
     setStopButton(ele) {
         this.#stopButton = ele;
-        this.#stopButton?.addEventListener("click", () => this.#stopTrack());
+        this.#stopButton?.addEventListener("click", () => this.stop());
     }
     /**
      * Configure the toogle for looping.
@@ -330,6 +346,11 @@ class MusicPlayer {
             .then(() => this.#dBHelper.getAllMusics())
             .then((data) => (this.#trackList = data))
             .then(() => this.#displayTrackList())
+            .then(() => {
+            if (!!this.ontracksloaded) {
+                this.ontracksloaded();
+            }
+        })
             .catch((err) => {
             console.error(err);
             alert("error: " + err);
@@ -417,20 +438,23 @@ class MusicPlayer {
                     if ("mediaSession" in navigator) {
                         navigator.mediaSession.metadata = new MediaMetadata(meta);
                         navigator.mediaSession.setActionHandler("play", () => {
-                            this.#playTrack();
+                            this.play();
                         });
                         navigator.mediaSession.setActionHandler("pause", () => {
-                            this.#pauseTrack();
+                            this.pause();
                         });
                         navigator.mediaSession.setActionHandler("stop", () => {
-                            this.#stopTrack();
+                            this.stop();
                         });
                         navigator.mediaSession.setActionHandler("seekto", (args) => {
                             this.#currentTrack.currentTime = args.seekTime;
                         });
                     }
+                    if (!!this.ontrackset) {
+                        this.ontrackset();
+                    }
+                    this.#playTrack();
                 });
-                this.#playTrack();
             });
         }
         else {
@@ -478,6 +502,9 @@ class MusicPlayer {
                 if (navigator.mediaSession) {
                     navigator.mediaSession.playbackState = "playing";
                 }
+                if (!!this.onplay) {
+                    this.onplay();
+                }
             })
                 .catch((e) => {
                 console.error("Cannot play selected track: ", e);
@@ -488,6 +515,12 @@ class MusicPlayer {
             console.warn("Track not set, will not play");
         }
     }
+    /**
+     * Basic playback contols.
+     */
+    play() {
+        this.#playTrack();
+    }
     #stopTrack() {
         if (this.#currentTrack) {
             this.#currentTrack.currentTime = 0;
@@ -495,8 +528,17 @@ class MusicPlayer {
             if (navigator.mediaSession) {
                 navigator.mediaSession.playbackState = "paused";
             }
+            if (!!this.onstop) {
+                this.onstop();
+            }
             console.info("Stopped playback");
         }
+    }
+    /**
+     * Basic playback contols.
+     */
+    stop() {
+        this.#stopTrack();
     }
     #pauseTrack() {
         if (this.#currentTrack) {
@@ -504,8 +546,17 @@ class MusicPlayer {
             if (navigator.mediaSession) {
                 navigator.mediaSession.playbackState = "paused";
             }
+            if (!!this.onpause) {
+                this.onpause();
+            }
             console.info("Paused playback");
         }
+    }
+    /**
+     * Basic playback contols.
+     */
+    pause() {
+        this.#pauseTrack();
     }
     /**
      * Get the total playback time of the current track in seconds.
