@@ -133,32 +133,65 @@ class MusicPlayer {
         const b = parseInt(colorHex.substring(5), 16);
         return { r, g, b };
     }
+    /**
+     * Configure ui element for playback controls.
+     *
+     * @param ele a `HTMLInputElement`
+     */
     setPlayButton(ele) {
         this.#playButton = ele;
         this.#playButton?.addEventListener("click", () => this.#playTrack());
     }
+    /**
+     * Configure ui element for playback controls.
+     *
+     * @param ele a `HTMLInputElement`
+     */
     setPauseButton(ele) {
         this.#pauseButton = ele;
         this.#pauseButton?.addEventListener("click", () => this.#pauseTrack());
     }
+    /**
+     * Configure ui element for playback controls.
+     *
+     * @param ele a `HTMLInputElement`
+     */
     setStopButton(ele) {
         this.#stopButton = ele;
         this.#stopButton?.addEventListener("click", () => this.#stopTrack());
     }
+    /**
+     * Configure the toogle for looping.
+     *
+     * @param ele a `HTMLInputElement`
+     */
     setLoopButton(ele) {
         this.#loopButton = ele;
         this.#loopButton.addEventListener("click", () => this.toggleLooping());
         this.#updateLoopingDisplay();
     }
+    /**
+     * Configure the toogle for random track selection.
+     *
+     * @param ele a `HTMLInputElement`
+     */
     setRandomButton(ele) {
         this.#randomButton = ele;
         this.#randomButton.addEventListener("click", () => this.toggleRandom());
         this.#updateRandomDisplay();
     }
+    /**
+     * Configure the track search input.
+     * @param ele a `HTMLInputElement`
+     */
     setSearchInput(ele) {
         this.#trackSearchInput = ele;
         this.#trackSearchInput?.addEventListener("input", (e) => this.#displayTrackList(this.#trackSearchInput.value));
     }
+    /**
+     * Configure the volume control ui element.
+     * @param ele a `HTMLInputElement` with type `range`
+     */
     setVolumeControl(ele) {
         if (ele.type !== "range") {
             console.warn(`Unexpected type for volume control input: expected 'range' but got ${ele.type}. Control may not function properly.`);
@@ -173,40 +206,89 @@ class MusicPlayer {
             this.changeVolumeByStep(e.deltaY < 0);
         });
     }
+    /**
+     * Configure the UI for displaying list of avilable tracks for user to select.
+     * @param rootEle `HTMLElement` where the list would be displayed.
+     * @param itemAdapter A callback function to transfrom individual track information into a track list item. The callback is supplied with an argument as follows:```{
+    index: number;
+    src: string;
+    name: string;
+    artist?: string;
+    album?: string;
+    albumIndex?: number;
+    cover?: string;
+}```.
+     *  The function should return a `HTMLElement`, which would then be compiled into a list and displayed.
+     */
     setTrackListItemDisplay(rootEle, itemAdapter) {
         this.#trackListDisplay = rootEle;
         this.#trackListItemAdapter = itemAdapter;
     }
+    /**
+     * Configure the UI for displaying current track name
+     * @param ele `HTMLElement` where the information would be displayed.
+     */
     setTrackNameDisplay(ele) {
         this.#trackNameDisplay = ele;
     }
+    /**
+     * Configure the UI for displaying current track elapsed time
+     * @param ele `HTMLElement` where the information would be displayed.
+     */
     setTrackTimeLapsedDisplay(ele) {
         this.#timeLapsedDisplay = ele;
     }
+    /**
+     * Configure the UI for displaying current track remaining time
+     * @param ele `HTMLElement` where the information would be displayed.
+     */
     setTrackTimeRemainDisplay(ele) {
         this.#timeRemainDisplay = ele;
     }
+    /**
+     * Configure the UI for displaying track album information
+     * @param ele `HTMLElement` where the track album would be displayed.
+     * @param placeholder A optional placeholder text that could be displayed when the track does not have album data.
+     */
     setTrackAlbumDisplay(ele, placeholder) {
         this.#trackAlbumDisplay = ele;
         if (!!placeholder) {
             this.#albumPlaceholder = placeholder;
         }
     }
+    /**
+     * Configure the UI for displaying track artist information
+     * @param ele `HTMLElement` where the track artist would be displayed.
+     * @param placeholder A optional placeholder text that could be displayed when the track does not have artist data.
+     */
     setTrackArtistDisplay(ele, placeholder) {
         this.#trackArtistDisplay = ele;
         if (!!placeholder) {
             this.#artistPlaceholder = placeholder;
         }
     }
+    /**
+     * Configure the UI for displaying album art
+     * @param ele `HTMLElement` where album art would be displayed.
+     * @param placeholder A optional placeholder `HTMLElement` that could be displayed when the track does not have album art data.
+     */
     setTrackAlbumArtDisplay(ele, placeholder) {
         this.#trackAlbumArtDisplay = ele;
         if (!!placeholder) {
             this.#albumArtPlaceholder = placeholder;
         }
     }
+    /**
+     * Configure the track play progress ui element.
+     * @param ele a `HTMLProgressElement`
+     */
     setTrackProgressDisplay(ele) {
         this.#trackProgressDisplay = ele;
     }
+    /**
+     * Configure the track seeker bar ui element.
+     * @param ele a `HTMLInputElement` with type `range`
+     */
     setTrackSeekBar(ele) {
         if (ele.type !== "range") {
             console.warn(`Unexpected type for seek control input: expected 'range' but got ${ele.type}. Control may not function properly.`);
@@ -218,6 +300,9 @@ class MusicPlayer {
         this.#trackSeekbar.addEventListener("touchstart", (e) => (this.#seeking = true));
         this.#trackSeekbar.addEventListener("touchend", (e) => (this.#seeking = false));
     }
+    /**
+     * Load the list of avaliable audio tracks from server.
+     */
     loadTrackList() {
         console.info("Loading track list");
         this.#dBHelper
@@ -422,27 +507,42 @@ class MusicPlayer {
             console.info("Paused playback");
         }
     }
+    /**
+     * Get the total playback time of the current track in seconds.
+     */
     get currentTrackDuration() {
         if (this.#currentTrack?.duration) {
             return this.#currentTrack.duration;
         }
         return null;
     }
+    /**
+     * Get the elapsed playback time of the current track in seconds.
+     */
     get currentTrackElapsedTime() {
         if (this.#currentTrack?.duration) {
             return this.#currentTrack.currentTime;
         }
         return null;
     }
+    /**
+     * Get the remaing playback time of the current track in seconds.
+     */
     get currentTrackRemainingTime() {
         if (!!this.currentTrackElapsedTime && !!this.currentTrackDuration) {
             return this.currentTrackDuration - this.currentTrackElapsedTime;
         }
         return null;
     }
+    /**
+     * Gets the current playback volume level ranging from 0 - 1;
+     */
     get playbackVolume() {
         return this.#volumeLevel;
     }
+    /**
+     * Sets the playback volume level. Value level ranges from 0 - 1 (inclusive).
+     */
     setVolume(value) {
         value = Math.max(0, Math.min(1, value)); //clamp value to valid range
         console.info(`Setting volume to ${value}x`);
@@ -460,6 +560,11 @@ class MusicPlayer {
             this.#volumeControl.value = this.#volumeLevel.toString();
         }
     }
+    /**
+     * Toggles looping.
+     *
+     * When enabled, current playing track would loop continously.
+     */
     toggleLooping() {
         this.#currentTrack.loop = !this.#currentTrack.loop;
         console.info("Looping enabled:", this.#currentTrack.loop);
@@ -475,6 +580,13 @@ class MusicPlayer {
             }
         }
     }
+    /**
+     * Toggles random track selection.
+     *
+     * When enabled, a random track will be played once the current track completes.
+     *
+     * Does not have any effect if looping is also enabled.
+     */
     toggleRandom() {
         this.#isRandom = !this.#isRandom;
         this.#updateRandomDisplay();
@@ -494,7 +606,11 @@ class MusicPlayer {
             this.#setTrack(this.#trackList[Math.floor(Math.random() * this.#trackList.length)].index);
         }
     }
-    toggleSystemOut(status) {
+    /**
+     * Disable/enable the default audio output.
+     * @param status output staus to be set.
+     */
+    toggleDefaultOutput(status) {
         if (!status) {
             this.#source.disconnect(this.#volumeAdjustor);
         }
