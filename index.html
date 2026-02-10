@@ -1,64 +1,100 @@
 <!DOCTYPE html>
 <html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<meta charset="UTF-8"/>
+		<!-- CSS Style Sheet Here -->
+		<link href="music-player.css" rel="stylesheet" type="text/css"/>
+		<script src="music-player.js"></script>
+		<title>Simple Play</title>
+	</head>
 
-<head>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta charset="UTF-8">
-	<!-- CSS Style Sheet Here -->
-	<link href='music-player.css' rel='stylesheet' type='text/css'>
-	<script src="music-player.js"></script>
+	<body>
+		<main>
+			<div id="track-list-wrapper">
+				<input id="track-search-input" type="text" placeholder="Search tracks..."/>
+				<nav id="type-filter"></nav>
+				<div id="track-list"></div>
+			</div>
+			<div id="player-panel">
+				<div id="player-info-panel">
+					<div id="player-album-art"></div>
+					<div id="player-name">&nbsp;</div>
+					<div id="player-artist">&nbsp;</div>
+					<div id="player-album">&nbsp;</div>
+					<div id="player-progress-panel">
+						<!-- <progress id="player-progress"></progress> -->
+						<input type="range" id="player-seekbar"/>
+						<div id="time-display">
+							<div id="player-lapsed-time">&nbsp;</div>
+							<div id="player-remaining-time">&nbsp;</div>
+						</div>
+					</div>
+				</div>
+				<div id="player-control-panel">
+					<div class="player-button" id="music-play-button">
+						<span class="icons"> &#x2BC8; </span>
+					</div>
+					<div class="player-button" id="music-pause-button">
+						<span class="icons"> &#x23F8; </span>
+					</div>
+					<div class="player-button" id="music-stop-button">
+						<span class="icons"> &#x23F9; </span>
+					</div>
+				</div>
+			</div>
+		</main>
+		<footer>
+			<span id="player-control-group-right">
+				<div class="player-button" id="music-loop-button">
+					<span class="icons"> &#x1F502; </span>
+				</div>
+				<div class="player-button" id="music-random-button">
+					<span class="icons"> &#x1F500; </span>
+				</div>
+			</span>
+			<div id="volume">
+				<input type="range" id="volume-control" name="volume" min="0" max="1"/>
+			</div>
+		</footer>
+	</body>
 	<script>
-			//Script here
-
+		let musicPlayer;
+		window.addEventListener("load", () => {
+			musicPlayer = new MusicPlayer();
+			//setup playback control
+			musicPlayer.setPlayButton(document.querySelector("#music-play-button"));
+			musicPlayer.setStopButton(document.querySelector("#music-stop-button"));
+			musicPlayer.setPauseButton(document.querySelector("#music-pause-button"));
+			musicPlayer.setLoopButton(document.querySelector("#music-loop-button"));
+			musicPlayer.setRandomButton(document.querySelector("#music-random-button"));
+			//setup searching
+			musicPlayer.setSearchInput(document.querySelector("#track-search-input"));
+			//volume ui
+			musicPlayer.setVolumeControl(document.querySelector("#volume-control"));
+			//track list items
+			musicPlayer.setTrackListItemDisplay(document.querySelector("#track-list"), (track) => {
+				const trackItem = document.createElement("div");
+				trackItem.classList.add("track-list-item");
+				if (!!track.album) {
+					const trackAlbum = document.createElement("span");
+					trackAlbum.classList.add("album-name");
+					trackAlbum.innerText = track.album + " / ";
+					trackItem.appendChild(trackAlbum);
+				}
+				trackItem.append(track.name);
+				return trackItem;
+			});
+			//initialise track info display
+			musicPlayer.setTrackNameDisplay(document.querySelector("#player-name"));
+			musicPlayer.setTrackTimeLapsedDisplay(document.querySelector("#player-lapsed-time"));
+			musicPlayer.setTrackTimeRemainDisplay(document.querySelector("#player-remaining-time"));
+			musicPlayer.setTrackAlbumArtDisplay(document.querySelector("#player-album-art"));
+			musicPlayer.setTrackAlbumDisplay(document.querySelector("#player-album"));
+			musicPlayer.setTrackArtistDisplay(document.querySelector("#player-artist"));
+			musicPlayer.setTrackProgressDisplay(document.querySelector("#player-progress"));
+			musicPlayer.setTrackSeekBar(document.querySelector("#player-seekbar"));
+			musicPlayer.loadTrackList();
+		});
 	</script>
-	<title>
-		Simple Play
-	</title>
-</head>
-
-<body>
-
-<header id="search-bar">
-	<input id="track-search-input" type="text" placeholder="Search tracks...">
-</header>
-<div id="track-list">
-</div>
-<footer>
-	<div class="player-button" id="music-play-button">
-			<span class="icons">
-				&#x2BC8;
-			</span>
-	</div>
-	<div class="player-button" id="music-pause-button">
-			<span class="icons">
-				&#x23F8;
-			</span>
-	</div>
-	<div class="player-button" id="music-stop-button">
-			<span class="icons">
-				&#x23F9;
-			</span>
-	</div>
-	<div id="player-name">
-		--
-	</div>
-	<div id="player-remaining-time"></div>
-	<span id="player-control-group-right">
-		<div class="player-button" id="music-loop-button">
-			<span class="icons">
-				&#x1F502;
-			</span>
-		</div>
-		<div class="player-button" id="music-random-button">
-			<span class="icons">
-				&#x1F500;
-			</span>
-		</div>
-	</span>
-	<div id="volume">
-		<input type="range" id="volume-control" name="volume" min="0" max="1">
-	</div>
-</footer>
-</body>
-
 </html>

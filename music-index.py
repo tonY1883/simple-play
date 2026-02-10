@@ -7,6 +7,7 @@ import mutagen
 import json
 from tqdm import tqdm
 import urllib.parse
+import hashlib
 
 dir_name = sys.argv[1]
 
@@ -45,3 +46,5 @@ for idx, file in enumerate(files, start = 1):
 		print(e)
 with open('index.json', 'w', encoding = 'utf8') as fp:
 	json.dump(tracks, fp, ensure_ascii = False)
+with open("index-hash.txt", "w") as checksum_file:
+	checksum_file.write(hashlib.md5(json.dumps(tracks).encode('utf-8')).hexdigest())
