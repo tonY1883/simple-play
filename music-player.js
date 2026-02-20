@@ -165,12 +165,6 @@ class MusicPlayer {
             return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
         }
     }
-    static colorToRGB(colorHex) {
-        const r = parseInt(colorHex.substring(1, 3), 16);
-        const g = parseInt(colorHex.substring(3, 5), 16);
-        const b = parseInt(colorHex.substring(5), 16);
-        return { r, g, b };
-    }
     /**
      * Configure ui element for playback controls.
      *
