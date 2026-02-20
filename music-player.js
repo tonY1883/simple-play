@@ -12,7 +12,11 @@ function base64ToBlob(base64) {
 }
 class MusicPlayer {
     #dBHelper;
+    #trackPlayer;
     #currentTrack;
+    get currentTrack() {
+        return this.#currentTrack;
+    }
     #trackList;
     #trackSearchInput;
     //basic ui pane
@@ -63,17 +67,17 @@ class MusicPlayer {
     constructor() {
         //setup media
         this.#dBHelper = new MusicDBHelper("music_index");
-        this.#currentTrack = new Audio();
+        this.#trackPlayer = new Audio();
         this.#audioContext = new AudioContext();
         const hook = () => this.#audioContext.resume();
         ["click", "keydown", "touchstart"].forEach((evt) => {
             window.addEventListener(evt, hook, { once: true });
         });
-        this.#source = this.#audioContext.createMediaElementSource(this.#currentTrack);
+        this.#source = this.#audioContext.createMediaElementSource(this.#trackPlayer);
         this.#lineOutNode = this.#audioContext.createMediaStreamDestination();
         this.#source.connect(this.#lineOutNode);
-        this.#currentTrack.onerror = () => {
-            console.error("Cannot play selected track: ", this.#currentTrack.error);
+        this.#trackPlayer.onerror = () => {
+            console.error("Cannot play selected track: ", this.#trackPlayer.error);
             if (this.#isRandom) {
                 console.warn("Selected track cannot be played, moving on to next track");
                 this.#randomSetTrack();
@@ -82,7 +86,7 @@ class MusicPlayer {
                 alert("Error occurred while trying to play selected track");
             }
         };
-        this.#currentTrack.ontimeupdate = () => {
+        this.#trackPlayer.ontimeupdate = () => {
             if (!!this.#timeLapsedDisplay) {
                 this.#timeLapsedDisplay.innerText = _a.formatTime(this.currentTrackElapsedTime);
             }
@@ -90,17 +94,17 @@ class MusicPlayer {
                 this.#timeRemainDisplay.innerText = _a.formatTime(this.currentTrackRemainingTime) ?? "";
             }
             if (!!this.#trackProgressDisplay) {
-                this.#trackProgressDisplay.value = this.currentTrackElapsedTime;
+                this.#trackProgressDisplay.value = this.currentTrackElapsedTime || 0;
             }
             if (!!this.#trackSeekbar && !this.#seeking) {
-                this.#trackSeekbar.value = this.currentTrackElapsedTime.toString();
+                this.#trackSeekbar.value = this.currentTrackElapsedTime?.toString() || "0";
             }
             if (!!this.onplayend && !this.#seeking && this.currentTrackRemainingTime === 0) {
                 this.onplayend();
             }
         };
-        this.#currentTrack.onended = () => {
-            if (this.#currentTrack.loop) {
+        this.#trackPlayer.onended = () => {
+            if (this.#trackPlayer.loop) {
                 console.info("Looping enabled, restarting playback");
             }
             else if (this.#isRandom) {
@@ -116,6 +120,21 @@ class MusicPlayer {
         const initialVolume = Number(localStorage.getItem(_a.VOLUME_PERSISTENCE_KEY)) || 0.5; //initialize from stored value
         this.setVolume(initialVolume);
         this.#albumArts = new Map();
+        this.#currentTrack = null;
+        if ("mediaSession" in navigator) {
+            navigator.mediaSession.setActionHandler("play", () => {
+                this.play();
+            });
+            navigator.mediaSession.setActionHandler("pause", () => {
+                this.pause();
+            });
+            navigator.mediaSession.setActionHandler("stop", () => {
+                this.stop();
+            });
+            navigator.mediaSession.setActionHandler("seekto", (args) => {
+                this.#trackPlayer.currentTime = args.seekTime;
+            });
+        }
     }
     static formatTime(duration) {
         if (isNaN(duration)) {
@@ -310,7 +329,7 @@ class MusicPlayer {
             console.warn(`Unexpected type for seek control input: expected 'range' but got ${ele.type}. Control may not function properly.`);
         }
         this.#trackSeekbar = ele;
-        this.#trackSeekbar.addEventListener("input", (e) => (this.#currentTrack.currentTime = Number(this.#trackSeekbar.value)));
+        this.#trackSeekbar.addEventListener("input", (e) => (this.#trackPlayer.currentTime = Number(this.#trackSeekbar.value)));
         this.#trackSeekbar.addEventListener("mousedown", (e) => (this.#seeking = true));
         this.#trackSeekbar.addEventListener("mouseup", (e) => (this.#seeking = false));
         this.#trackSeekbar.addEventListener("touchstart", (e) => (this.#seeking = true));
@@ -385,15 +404,50 @@ class MusicPlayer {
             this.#trackListDisplay.appendChild(trackList);
         }
     }
+    #clearCurrentTrack() {
+        if (!this.#trackPlayer.paused) {
+            console.info("Current track not stooped, stopping");
+            this.#trackPlayer.pause();
+        }
+        this.#currentTrack = null;
+        this.#trackPlayer.src = "";
+        if (!!this.#trackNameDisplay) {
+            this.#trackNameDisplay.innerText = "";
+        }
+        if (this.#trackAlbumDisplay) {
+            this.#trackAlbumDisplay.innerText = this.#albumPlaceholder;
+        }
+        if (!!this.#trackArtistDisplay) {
+            this.#trackArtistDisplay.innerText = this.#artistPlaceholder;
+        }
+        if (!!this.#trackProgressDisplay) {
+            this.#trackProgressDisplay.max = 0;
+            this.#trackProgressDisplay.value = 0;
+        }
+        if (!!this.#trackSeekbar) {
+            this.#trackSeekbar.max = "0";
+            this.#trackSeekbar.value = "0";
+        }
+        if (!!this.#timeLapsedDisplay) {
+            this.#timeLapsedDisplay.innerText = _a.formatTime(0);
+        }
+        if (!!this.#timeRemainDisplay) {
+            this.#timeRemainDisplay.innerText = _a.formatTime(0);
+        }
+        if (this.#trackAlbumArtDisplay) {
+            this.#trackAlbumArtDisplay.innerHTML = "";
+        }
+        if ("mediaSession" in navigator) {
+            navigator.mediaSession.metadata = null;
+        }
+    }
     #setTrack(index) {
         let track = this.#trackList?.find((t) => t.index === index);
         if (!!track) {
             //unset the current track first
-            if (this.#currentTrack && !this.#currentTrack.paused) {
-                console.info("Current track not stooped, stopping");
-                this.#currentTrack.pause();
-            }
+            this.#clearCurrentTrack();
             this.#loadTrack(track.src, () => {
+                this.#currentTrack = track;
                 if (!!this.#trackNameDisplay) {
                     this.#trackNameDisplay.innerText = track.name;
                 }
@@ -415,9 +469,9 @@ class MusicPlayer {
                     this.#timeLapsedDisplay.innerText = _a.formatTime(0);
                 }
                 if (!!this.#timeRemainDisplay) {
-                    this.#timeRemainDisplay.innerText = _a.formatTime(this.#currentTrack.duration);
+                    this.#timeRemainDisplay.innerText = _a.formatTime(this.#trackPlayer.duration);
                 }
-                this.#currentTrack.oncanplay = null; //unset the event
+                this.#trackPlayer.oncanplay = null; //unset the event
                 this.#loadTrackCoverArt(track).then(() => {
                     const meta = {
                         title: track.name,
@@ -437,18 +491,6 @@ class MusicPlayer {
                     }
                     if ("mediaSession" in navigator) {
                         navigator.mediaSession.metadata = new MediaMetadata(meta);
-                        navigator.mediaSession.setActionHandler("play", () => {
-                            this.play();
-                        });
-                        navigator.mediaSession.setActionHandler("pause", () => {
-                            this.pause();
-                        });
-                        navigator.mediaSession.setActionHandler("stop", () => {
-                            this.stop();
-                        });
-                        navigator.mediaSession.setActionHandler("seekto", (args) => {
-                            this.#currentTrack.currentTime = args.seekTime;
-                        });
                     }
                     if (!!this.ontrackset) {
                         this.ontrackset();
@@ -463,15 +505,12 @@ class MusicPlayer {
     }
     #loadTrack(path, onLoad) {
         console.info("Loading track: ", path);
-        this.#currentTrack.src = path;
-        this.#currentTrack.oncanplay = onLoad;
-        this.#currentTrack.load();
+        this.#trackPlayer.src = path;
+        this.#trackPlayer.oncanplay = onLoad;
+        this.#trackPlayer.load();
     }
     async #loadTrackCoverArt(track) {
         console.info("Loading cover art for track " + track.index);
-        if (this.#trackAlbumArtDisplay) {
-            this.#trackAlbumArtDisplay.innerHTML = "";
-        }
         if (!(!!track.cover && this.#albumArts.has(track.cover))) {
             if (!!track.cover) {
                 let image = await this.#dBHelper.getCoverArt(track.cover);
@@ -495,7 +534,7 @@ class MusicPlayer {
     }
     #playTrack() {
         if (this.#currentTrack) {
-            this.#currentTrack
+            this.#trackPlayer
                 .play()
                 .then(() => {
                 console.log("Begin playing selected track");
@@ -523,8 +562,8 @@ class MusicPlayer {
     }
     #stopTrack() {
         if (this.#currentTrack) {
-            this.#currentTrack.currentTime = 0;
-            this.#currentTrack.pause();
+            this.#trackPlayer.currentTime = 0;
+            this.#trackPlayer.pause();
             if (navigator.mediaSession) {
                 navigator.mediaSession.playbackState = "paused";
             }
@@ -542,7 +581,7 @@ class MusicPlayer {
     }
     #pauseTrack() {
         if (this.#currentTrack) {
-            this.#currentTrack.pause();
+            this.#trackPlayer.pause();
             if (navigator.mediaSession) {
                 navigator.mediaSession.playbackState = "paused";
             }
@@ -562,8 +601,8 @@ class MusicPlayer {
      * Get the total playback time of the current track in seconds.
      */
     get currentTrackDuration() {
-        if (this.#currentTrack?.duration) {
-            return this.#currentTrack.duration;
+        if (this.#currentTrack) {
+            return this.#trackPlayer.duration;
         }
         return null;
     }
@@ -571,8 +610,8 @@ class MusicPlayer {
      * Get the elapsed playback time of the current track in seconds.
      */
     get currentTrackElapsedTime() {
-        if (this.#currentTrack?.duration) {
-            return this.#currentTrack.currentTime;
+        if (this.#currentTrack) {
+            return this.#trackPlayer.currentTime;
         }
         return null;
     }
@@ -643,13 +682,13 @@ class MusicPlayer {
      * When enabled, current playing track would loop continously.
      */
     toggleLooping() {
-        this.#currentTrack.loop = !this.#currentTrack.loop;
-        console.info("Looping enabled:", this.#currentTrack.loop);
+        this.#trackPlayer.loop = !this.#trackPlayer.loop;
+        console.info("Looping enabled:", this.#trackPlayer.loop);
         this.#updateLoopingDisplay();
     }
     #updateLoopingDisplay() {
         if (!!this.#loopButton) {
-            if (this.#currentTrack?.loop) {
+            if (this.#trackPlayer?.loop) {
                 this.#loopButton.style.opacity = "1";
             }
             else {
