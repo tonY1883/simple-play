@@ -64,6 +64,8 @@ class MusicPlayer {
     onstop;
     /** Callback triggers on track pause */
     onpause;
+    /** Hook for processing Media Session API metadata.*/
+    onsetmediasessionmeta;
     constructor() {
         //setup media
         this.#dBHelper = new MusicDBHelper("music_index");
@@ -135,6 +137,7 @@ class MusicPlayer {
                 this.#trackPlayer.currentTime = args.seekTime;
             });
         }
+        this.onsetmediasessionmeta = (data) => data;
     }
     static formatTime(duration) {
         if (isNaN(duration)) {
@@ -490,7 +493,7 @@ class MusicPlayer {
                         this.#trackAlbumArtDisplay.appendChild(this.#albumArtPlaceholder);
                     }
                     if ("mediaSession" in navigator) {
-                        navigator.mediaSession.metadata = new MediaMetadata(meta);
+                        navigator.mediaSession.metadata = new MediaMetadata(this.onsetmediasessionmeta(meta));
                     }
                     if (!!this.ontrackset) {
                         this.ontrackset();
