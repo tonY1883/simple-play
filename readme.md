@@ -6,7 +6,9 @@ A simple, lightweight, customizable and extendable Javascript audio playback lib
 
 - In browser audio playback
 - Basic playback control: play, pause, stop, volume adjust, looping and shuffle
+- Integration with browser/OS media control
 - Track searching
+- Cover art display
 - Nothing more
 
 ## Dependencies
@@ -31,10 +33,7 @@ This repository include a simple, abeit barebone example that could be used as a
 ./music-index.py <directory of music files>
 ```
 
-The script will search for and index every supported audio file in the given directory. Audio track information is based on the appropreiate tags if available.
-
-This generates a `index.json` file in the directory, which will be used by the front end to load the
-audio files.
+The script will search for and index every supported audio file in the given directory. Audio track information is based on the appropreiate tags if available. All generated data are saved to the `.simple-play-data` directory.
 
 4. Navigate to the site with your browser. You should be able to play you tracks now.
 
@@ -46,76 +45,78 @@ If you want to have a more sophisticated, elegant interface, you coulld integrat
 <script src="music-player.js"></script>
 ```
 
+or, through *jsDelivr*:
+```html
+<script src="https://cdn.jsdelivr.net/gh/tonY1883/simple-play@master/music-player.js"></script>
+```
+
+Then, in your code:
+
 ```javascript
 //initialize
 const musicPlayer = new MusicPlayer();
 //set ui elements
 musicPlayer.setPlayButton(document.querySelector("#music-play-button"));
+...
 //load tracks
 musicPlayer.loadTrackList();
 ```
 
-For detailed usage, refer to the example site.
+For detailed usage, refer to the example site and the code comments.
 
-`SimplePlay` provides the following API:
+### Available APIs
 
-```Javascript
-    /** Callback triggers after the track list is loaded from server */
-    ontracksloaded: (() => void) | undefined;
-    /** Callback triggers after the individual track is selected */
-    ontrackset: (() => void) | undefined;
-    /** Callback triggers on track play/resume */
-    onplay: (() => void) | undefined;
-    /** Callback triggers when current track is completed */
-    onplayend: (() => void) | undefined;
-    /** Callback triggers on track stop */
-    onstop: (() => void) | undefined;
-    /** Callback triggers on track pause */
-    onpause: (() => void) | undefined;
-    /**
-     * Configure ui element for playback controls.
-     *
-     * @param ele a `HTMLInputElement`
-     */
-    setPlayButton(ele: HTMLElement): void;
-    /**
-     * Configure ui element for playback controls.
-     *
-     * @param ele a `HTMLInputElement`
-     */
-    setPauseButton(ele: HTMLElement): void;
-    /**
-     * Configure ui element for playback controls.
-     *
-     * @param ele a `HTMLInputElement`
-     */
-    setStopButton(ele: HTMLElement): void;
-    /**
-     * Configure the toogle for looping.
-     *
-     * @param ele a `HTMLInputElement`
-     */
-    setLoopButton(ele: HTMLElement): void;
-    /**
-     * Configure the toogle for random track selection.
-     *
-     * @param ele a `HTMLInputElement`
-     */
-    setRandomButton(ele: HTMLElement): void;
-    /**
-     * Configure the track search input.
-     * @param ele a `HTMLInputElement`
-     */
-    setSearchInput(ele: HTMLInputElement): void;
-    /**
-     * Configure the volume control ui element.
-     * @param ele a `HTMLInputElement` with type `range`
-     */
-    setVolumeControl(ele: HTMLInputElement): void;
-    /**
-     * Configure the UI for displaying list of avilable tracks for user to select.
-     * @param rootEle `HTMLElement` where the list would be displayed.
-     * @param itemAdapter A callback function to transfrom individual track information into a track list item. The callback is supplied with an argument as follows:```{
+#### Properties
+
+`ontracksloaded` : Callback method that triggers after the track list is loaded from server.
+
+`ontrackset`: Callback triggers after the individual track is selected
+
+`onplay`: Callback triggers on track play/resume
+
+`onplayend`: Callback triggers when current track is completed
+
+`onstop`: Callback triggers on track stop
+
+`onpause`: allback triggers on track pause
+
+`onsetmediasessionmeta`: Hook method to customize the information displayed on browser/system media control via Media Session API. This method is expected to return a `MediaMetadataInit` object.
+
+`currentTrackDuration`: Get the total playback time of the current track in seconds.
+
+`currentTrackElapsedTime`: Get the elapsed playback time of the current track in seconds.
+
+`currentTrackRemainingTime`:  Get the remaing playback time of the current track in seconds.
+
+`playbackVolume`: Get the current playback volume ranging from 0 - 1
+
+`playbackVolumeLevel`: Get the current playback volume level in terms of `volumeControlSteps`.
+
+`volumeControlSteps`: The total number of steps available to control the volume. This value can be changed during runtime.
+
+`lineOut`: A `MediaStreamAudioDestinationNode` to allow custom audio processing via Web Audio API. You can feed this node as the input to your audio graph.
+
+
+#### Methods
+
+`setPlayButton(ele)`: Set a HTML element to act as the play button.
+
+`setPauseButton(ele)`: Set a HTML element to act as the pause button.
+
+`setStopButton(ele)`: Set a HTML element to act as the stop button.
+
+`setLoopButton(ele)`: Set a HTML element to act as the looping toggle button. Looping is for single track only.
+
+`setRandomButton(ele)`: Set a HTML element to act as the shuffle toggle button. When enabled, will play a random track oncemthe current track completes. Has no effect when looping is enabled.
+
+`setSearchInput(ele)`: Set a `HTMLInputElement` to act as the text search input field. Searching only searches for track name and album name.
+
+`setVolumeControl(ele)`: Set a `HTMLInputElement` to act as the volume control slider. The element must be of the type `range`.
+
+`setTrackListItemDisplay(rootEle, itemAdapter)`: Set the HTML element for displaying the list of tracks. The `itemAdapter` argument is a function that transform individual track data into a `HTMLElement`, each indivisual track info is a object as follows, and is the only argument of the function:
+
+```typescript
+{
     index: number;
     src: string;
     name: string;
@@ -123,128 +124,32 @@ For detailed usage, refer to the example site.
     album?: string;
     albumIndex?: number;
     cover?: string;
-}```.
-     *  The function should return a `HTMLElement`, which would then be compiled into a list and displayed.
-     */
-    setTrackListItemDisplay(rootEle: HTMLElement, itemAdapter: (track: MusicTrack) => HTMLElement): void;
-    /**
-     * Configure the UI for displaying current track name
-     * @param ele `HTMLElement` where the information would be displayed.
-     */
-    setTrackNameDisplay(ele: HTMLElement): void;
-    /**
-     * Configure the UI for displaying current track elapsed time
-     * @param ele `HTMLElement` where the information would be displayed.
-     */
-    setTrackTimeLapsedDisplay(ele: HTMLElement): void;
-    /**
-     * Configure the UI for displaying current track remaining time
-     * @param ele `HTMLElement` where the information would be displayed.
-     */
-    setTrackTimeRemainDisplay(ele: HTMLElement): void;
-    /**
-     * Configure the UI for displaying track album information
-     * @param ele `HTMLElement` where the track album would be displayed.
-     * @param placeholder A optional placeholder text that could be displayed when the track does not have album data.
-     */
-    setTrackAlbumDisplay(ele: HTMLElement, placeholder?: string): void;
-    /**
-     * Configure the UI for displaying track artist information
-     * @param ele `HTMLElement` where the track artist would be displayed.
-     * @param placeholder A optional placeholder text that could be displayed when the track does not have artist data.
-     */
-    setTrackArtistDisplay(ele: HTMLElement, placeholder?: string): void;
-    /**
-     * Configure the UI for displaying album art
-     * @param ele `HTMLElement` where album art would be displayed.
-     * @param placeholder A optional placeholder `HTMLElement` that could be displayed when the track does not have album art data.
-     */
-    setTrackAlbumArtDisplay(ele: HTMLElement, placeholder?: HTMLElement): void;
-    /**
-     * Configure the track play progress ui element.
-     * @param ele a `HTMLProgressElement`
-     */
-    setTrackProgressDisplay(ele: HTMLProgressElement): void;
-    /**
-     * Configure the track seeker bar ui element.
-     * @param ele a `HTMLInputElement` with type `range`
-     */
-    setTrackSeekBar(ele: HTMLInputElement): void;
-    /**
-     * Load the list of avaliable audio tracks from server.
-     */
-    loadTrackList(): void;
-    /**
-     * Basic playback contols.
-     */
-    play(): void;
-    /**
-     * Basic playback contols.
-     */
-    stop(): void;
-    /**
-     * Basic playback contols.
-     */
-    pause(): void;
-    /**
-     * Get the total playback time of the current track in seconds.
-     */
-    get currentTrackDuration(): number | null;
-    /**
-     * Get the elapsed playback time of the current track in seconds.
-     */
-    get currentTrackElapsedTime(): number | null;
-    /**
-     * Get the remaing playback time of the current track in seconds.
-     */
-    get currentTrackRemainingTime(): number | null;
-    /**
-     * Get the current playback volume ranging from 0 - 1;
-     */
-    get playbackVolume(): number;
-    /**
-     * Get the current playback volume level in terms of {@linkcode volumeControlSteps}.
-     */
-    get playbackVolumeLevel(): number;
-    /**
-     * Set the playback volume level. Value level ranges from 0 - 1 (inclusive).
-     */
-    setVolume(value: number): void;
-    set volumeControlSteps(totalSteps: number);
-    /**
-     * Total amount of volume levels avilable.
-     */
-    get volumeControlSteps(): number;
-    /**
-     * Increment/decrement volume level by step.
-     * @param increase boolean, pass in `true` to increase volume by 1 step, otherwise to decrease by 1 step.
-     */
-    changeVolumeByStep(increase: boolean): void;
-    /**
-     * Toggles looping.
-     *
-     * When enabled, current playing track would loop continously.
-     */
-    toggleLooping(): void;
-    /**
-     * Toggles random track selection.
-     *
-     * When enabled, a random track will be played once the current track completes.
-     *
-     * Does not have any effect if looping is also enabled.
-     */
-    toggleRandom(): void;
-    /**
-     * Disable/enable the default audio output.
-     * @param status output staus to be set.
-     */
-    toggleDefaultOutput(status: boolean): void;
-    /**
-     * Web Audio compatible output to allow custom audio processing.
-     *
-     * This output is not affected by volume control.
-     *
-     * @return A `MediaStreamAudioDestinationNode`
-     */
-    get lineOut(): MediaStreamAudioDestinationNode;
+}
 ```
+
+`setTrackNameDisplay(ele)`: Set a `HTMLElement` for displaying the name of the current track.
+
+`setTrackTimeLapsedDisplay(ele)`: Set a `HTMLElement` for displaying the lapsed time of the current track.
+
+`setTrackTimeRemainDisplay(ele)`: Set a `HTMLElement` for displaying the remaining time of the current track.
+
+`setTrackAlbumDisplay(ele, placeholder)`: Set a `HTMLElement` for displaying the album art of the current track. The optional `placeholder` argument aollows a custom string to be displayed when the track does not have album art.
+
+`setTrackProgressDisplay(ele)`: Set a `HTMLProgressElement` for displaying the current playback progress.
+
+`setTrackTimeLapsedDisplay(ele)`: Set a `HTMLElement` for displaying the lapsed time of the current track.
+
+`loadTrackList()`: Instruct Simple Play to load the list of avilable tracks from server.
+
+`play()`, `stop()`, `pause()`: Basic playback contols for the current track, if any has been selected.
+
+`setVolume(value)`: Set the playback volume level. Value level ranges from 0 - 1 (inclusive).
+
+`changeVolumeByStep(increase)`: Change the volume by 1 `volumeControlStep`. The parameter indicates the change direction. (`true` for increase)
+
+`toggleLooping()`: Enable/disable looping.
+
+`toggleRandom()`: Enable/disable shuffling.
+
+`toggleDefaultOutput(status)`: Enable/disable the default audio out path. If you are using the `lineOut` property to apply custom sound effects, the default output need to be disabled.
+
