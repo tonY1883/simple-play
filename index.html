@@ -10,7 +10,9 @@
 	</head>
 
 	<body>
+		<header><span class="player-button" id="track-list-button"> &#x1D160; </span></header>
 		<main>
+
 			<div id="track-list-wrapper">
 				<input id="track-search-input" type="text" placeholder="Search tracks..."/>
 				<nav id="type-filter"></nav>
@@ -24,7 +26,7 @@
 					<div id="player-album">&nbsp;</div>
 					<div id="player-progress-panel">
 						<!-- <progress id="player-progress"></progress> -->
-						<input type="range" id="player-seekbar"/>
+						<input type="range" id="player-seekbar" value="0"/>
 						<div id="time-display">
 							<div id="player-lapsed-time">&nbsp;</div>
 							<div id="player-remaining-time">&nbsp;</div>
@@ -95,6 +97,8 @@
 			musicPlayer.setTrackProgressDisplay(document.querySelector("#player-progress"));
 			musicPlayer.setTrackSeekBar(document.querySelector("#player-seekbar"));
 			musicPlayer.loadTrackList();
+			//track list toggle - only for this demo
+			document.querySelector("#track-list-button").addEventListener("click", () => document.querySelector("#track-list-wrapper").classList.toggle("active"));
 		});
 	</script>
 </html>
