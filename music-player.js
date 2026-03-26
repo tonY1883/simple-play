@@ -119,7 +119,7 @@ class MusicPlayer {
         //volume processing
         this.#volumeAdjustor = new GainNode(this.#audioContext);
         this.#source.connect(this.#volumeAdjustor).connect(this.#audioContext.destination);
-        const initialVolume = Number(localStorage.getItem(_a.VOLUME_PERSISTENCE_KEY)) || 0.5; //initialize from stored value
+        const initialVolume = Number(localStorage.getItem(_a.VOLUME_PERSISTENCE_KEY) ?? 0.5); //initialize from stored value
         this.setVolume(initialVolume);
         this.#albumArts = new Map();
         this.#currentTrack = null;
