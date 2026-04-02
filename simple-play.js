@@ -153,7 +153,11 @@ class MusicPlayer {
     }
     static trackSorter(a, b) {
         if (!!a.album && !!b.album) {
-            return a.album !== b.album ? a.album.localeCompare(b.album) : a.albumIndex - b.albumIndex;
+            return a.album !== b.album
+                ? a.album.localeCompare(b.album)
+                : a.albumDisc !== b.albumDisc
+                    ? a.albumDisc - b.albumDisc
+                    : a.albumIndex - b.albumIndex;
         }
         else if (!!a.album) {
             return 1;

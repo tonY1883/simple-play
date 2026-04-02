@@ -52,6 +52,8 @@ for idx, file in enumerate(files, start = 1):
 					data["album"] = audio['album'][0]
 				if 'tracknumber' in audio:
 					data["albumIndex"] = int(audio['tracknumber'][0].split('/')[0])
+				if 'discnumber' in audio:
+					data["albumDisc"] = int(audio['discnumber'][0].split('/')[0])
 			else:
 				pbar.set_description(file.stem)
 				data["name"] = file.stem
