@@ -119,7 +119,7 @@ class MusicPlayer {
         //volume processing
         this.#volumeAdjustor = new GainNode(this.#audioContext);
         this.#source.connect(this.#volumeAdjustor).connect(this.#audioContext.destination);
-        const initialVolume = Number(localStorage.getItem(_a.VOLUME_PERSISTENCE_KEY)) || 0.5; //initialize from stored value
+        const initialVolume = Number(localStorage.getItem(_a.VOLUME_PERSISTENCE_KEY) ?? 0.5); //initialize from stored value
         this.setVolume(initialVolume);
         this.#albumArts = new Map();
         this.#currentTrack = null;
@@ -153,7 +153,11 @@ class MusicPlayer {
     }
     static trackSorter(a, b) {
         if (!!a.album && !!b.album) {
-            return a.album < b.album ? -1 : a.album > b.album ? 1 : a.albumIndex - b.albumIndex;
+            return a.album !== b.album
+                ? a.album.localeCompare(b.album)
+                : a.albumDisc !== b.albumDisc
+                    ? a.albumDisc - b.albumDisc
+                    : a.albumIndex - b.albumIndex;
         }
         else if (!!a.album) {
             return 1;
