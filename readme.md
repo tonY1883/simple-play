@@ -42,12 +42,14 @@ The script will search for and index every supported audio file in the given dir
 If you want to have a more sophisticated, elegant interface, you coulld integrate `simple-play.js` into your custom frontend.
 
 ```html
-<script src="music-player.js"></script>
+
+<script src="simple-play.js"></script>
 ```
 
 or, through *jsDelivr*:
 ```html
-<script src="https://cdn.jsdelivr.net/gh/tonY1883/simple-play@master/music-player.js"></script>
+
+<script src="https://cdn.jsdelivr.net/gh/tonY1883/simple-play@master/simple-play.js"></script>
 ```
 
 Then, in your code:
