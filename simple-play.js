@@ -10,7 +10,7 @@ function base64ToBlob(base64) {
     const byteArray = new Uint8Array(byteNumbers);
     return new Blob([byteArray]);
 }
-class MusicPlayer {
+class SimplePlay {
     #dBHelper;
     #trackPlayer;
     #currentTrack;
@@ -746,7 +746,7 @@ class MusicPlayer {
         return this.#lineOutNode;
     }
 }
-_a = MusicPlayer;
+_a = SimplePlay;
 class IndexdDBHelper {
     #dbName;
     #dbVersion;
