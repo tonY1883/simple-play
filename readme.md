@@ -56,7 +56,7 @@ Then, in your code:
 
 ```javascript
 //initialize
-const musicPlayer = new MusicPlayer();
+const musicPlayer = new SimplePlay();
 //set ui elements
 musicPlayer.setPlayButton(document.querySelector("#music-play-button"));
 ...
