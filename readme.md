@@ -1,6 +1,6 @@
 # Simple Play
 
-A simple, lightweight, customizable and extendable Javascript audio playback library.
+A simple, lightweight, customizable and extendable web music / audio player.
 
 ## Feature
 
